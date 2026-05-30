@@ -7,8 +7,18 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; touch-action: none; -webkit-tap-highlight-color: transparent; }
-#gameContainer { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
-#gameContainer canvas { z-index: 0 !important; }
+#phaserWrap { width: 100%; height: 100%; position: relative; z-index: 1; }
+#phaserWrap canvas {
+  position: fixed !important; top: 0; left: 0; width: 100vw !important; height: 100vh !important;
+  z-index: 0 !important; pointer-events: none !important;
+}
+
+/* Transparent game input layer — sits between canvas and HTML overlays */
+/* Receives pointer events for Phaser, overlays have z-index 10+ and get priority */
+#gameInputLayer {
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: auto;
+}
 
 /* HUD Overlay */
 #hud {
@@ -17,6 +27,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
   padding: 6px 8px;
   background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
   font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex; gap: 6px; pointer-events: none;
 }
 .hud-item {
   display: flex; align-items: center; gap: 4px;
@@ -159,6 +170,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 <body>
 <div id="gameContainer">
 
+<!-- Phaser wrapper: Phaser renders here, canvas is positioned fixed with pointer-events:none -->
+<div id="phaserWrap"></div>
+
+<!-- Game input layer: receives pointer events for Phaser grid cells -->
+<div id="gameInputLayer"></div>
+
 <div id="hud">
   <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
   <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> <span id="waveVal">0</span>/<span id="totalWaves">25</span></div>
@@ -294,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window._gameScene && window._gameScene._begin) window._gameScene._begin();
     else {
       const cv = document.querySelector('canvas');
-      if (cv) { cv.style.visibility = 'visible'; cv.style.pointerEvents = 'auto'; }
+      if (cv) { cv.style.visibility = 'visible'; }
     }
   });
   ['restartBtn','restartBtn2'].forEach(id => {
@@ -314,6 +331,57 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const gold = document.getElementById('gold');
   if (gold) gold.addEventListener('click', () => { if (window._gameScene) window._gameScene._collectPowerUps(); });
+
+  // === GAME INPUT LAYER: forwards pointer events to Phaser ===
+  // The #gameInputLayer div sits at z-index 2 (above canvas z-index 0, below overlays z-index 10).
+  // Overlay buttons intercept pointer events first. Game-area touches fall through to this div.
+  const inputLayer = document.getElementById('gameInputLayer');
+  if (inputLayer) {
+    function isOverlayElement(el) {
+      while (el && el !== document.body) {
+        const id = el.id;
+        if (id && ['#hud', '#actionBar', '#towerPanel', '#powerUpBar', '#tooltip',
+                    '#gameOverScreen', '#winScreen', '#startScreen', '#modeIndicator'].includes(id)) return true;
+        const cls = el.className;
+        if (cls && typeof cls === 'string' && cls.includes &&
+            (cls.includes('tower-btn') || cls.includes('action-btn') || cls.includes('pu-icon'))) return true;
+        el = el.parentElement;
+      }
+      return false;
+    }
+    inputLayer.addEventListener('pointerdown', (e) => {
+      const scene = window._gameScene;
+      if (!scene || !scene.input) return;
+      if (isOverlayElement(e.target)) return;
+      const pointer = scene.input.addPointer();
+      const gameX = scene.cameras.main.worldToPointer(e).x;
+      const gameY = scene.cameras.main.worldToPointer(e).y;
+      pointer.setPosition(gameX, gameY);
+      scene.input.down.dispatch(pointer);
+    });
+    inputLayer.addEventListener('pointermove', (e) => {
+      const scene = window._gameScene;
+      if (!scene || !scene.input) return;
+      if (isOverlayElement(e.target)) return;
+      const pointer = scene.input.getFirstActive();
+      if (!pointer) return;
+      const gameX = scene.cameras.main.worldToPointer(e).x;
+      const gameY = scene.cameras.main.worldToPointer(e).y;
+      pointer.setPosition(gameX, gameY);
+      scene.input.move.dispatch(pointer);
+    });
+    inputLayer.addEventListener('pointerup', (e) => {
+      const scene = window._gameScene;
+      if (!scene || !scene.input) return;
+      if (isOverlayElement(e.target)) return;
+      const pointer = scene.input.getFirstActive();
+      if (!pointer) return;
+      const gameX = scene.cameras.main.worldToPointer(e).x;
+      const gameY = scene.cameras.main.worldToPointer(e).y;
+      pointer.setPosition(gameX, gameY);
+      scene.input.up.dispatch(pointer);
+    });
+  }
 });
 
 const COLS = 12, ROWS = 16, CELL = 48;
@@ -440,7 +508,7 @@ class GameScene extends Phaser.Scene {
     this.bossList = [];
 
     const cv = document.querySelector('canvas');
-    if (cv) { cv.style.pointerEvents = 'none'; cv.style.visibility = 'hidden'; }
+    if (cv) { cv.style.visibility = 'hidden'; }
     this._canvas = cv;
 
     this.cameras.main.setBackgroundColor('#0a0a1a');
@@ -1534,7 +1602,7 @@ class GameScene extends Phaser.Scene {
     document.getElementById('startScreen').style.display = 'none';
     this.gameStarted = true;
     this.goldStartTime = this.time.now;
-    if (this._canvas) { this._canvas.style.visibility = 'visible'; this._canvas.style.pointerEvents = 'auto'; }
+    if (this._canvas) { this._canvas.style.visibility = 'visible'; }
     this._updateWavePreview();
   }
   _gameOver() {
@@ -1657,7 +1725,7 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     setMinMax: [360, 480, MAP_W, MAP_H],
   },
-  parent: 'gameContainer',
+  parent: 'phaserWrap',
   physics: { default:'arcade', arcade:{debug:false} },
   scene:[GameScene],
   render:{antialias:true, pixelArt:false},
