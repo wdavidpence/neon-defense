@@ -8,6 +8,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; touch-action: none; -webkit-tap-highlight-color: transparent; }
 #gameContainer { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+#gameContainer canvas { z-index: 0 !important; }
 
 /* HUD Overlay */
 #hud {
@@ -1053,6 +1054,7 @@ class GameScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
+  parent: 'gameContainer',
   width: MAP_W, height: MAP_H,
   backgroundColor: '#0a0a1a',
   scale: {
