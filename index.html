@@ -592,6 +592,7 @@ class GameScene extends Phaser.Scene {
     this.combo = 0; this.lastKillTime = 0;
     // Speed
     this.gameSpeed = 1;
+    this._frameDelta = 16.67; // safe default until first update() tick
     // Gold tracking for GPS
     this.goldEarned = 0; this.goldStartTime = 0; this.lastGpsUpdate = 0;
     // Auto-start
@@ -1155,11 +1156,17 @@ class GameScene extends Phaser.Scene {
     this.enemiesRemaining = this.spawnQueue.length;
 
     const delay = this.wave > 18 ? 300 : this.wave > 10 ? 400 : 550;
-    this.spawnQueue.forEach((ed, i) => {
-      this.time.delayedCall(i * delay / this.gameSpeed, () => {
-        if (!this.gameOver) this._spawnEnemy(ed.type, ed.hp);
-      });
-    });
+    // Use raw setTimeout instead of Phaser's time.delayedCall — the latter has
+    // proven unreliable for chained spawns in Phaser 3.80.1 (subsequent calls never fire).
+    const spawnNext = (idx) => {
+      if (this.gameOver || !this.waveActive || idx >= this.spawnQueue.length) return;
+      const ed = this.spawnQueue[idx];
+      this._spawnEnemy(ed.type, ed.hp);
+      if (idx + 1 < this.spawnQueue.length) {
+        setTimeout(() => spawnNext(idx + 1), delay / this.gameSpeed);
+      }
+    };
+    spawnNext(0);
 
     if (this.wave === 1) this.goldStartTime = this.time.now;
     SFX.waveStart();
@@ -1171,6 +1178,7 @@ class GameScene extends Phaser.Scene {
 
   _spawnEnemy(type, hp) {
     const def = ENEMY_DEFS[type];
+    if (!def) return; // Silent guard against unknown enemy type
     const sp = this.add.image(PATH[0].x, PATH[0].y, `e_${type}`).setDepth(4);
     sp.setScale(def.r / 12);
 
@@ -1225,7 +1233,7 @@ class GameScene extends Phaser.Scene {
 
   // ---------- ENEMIES ----------
   _updateEnemies() {
-    const dt = this.game.loop.actualDelta * this.gameSpeed;
+    const dt = this._frameDelta * this.gameSpeed;
     for (let i = this.enemies.length-1; i >= 0; i--) {
       const e = this.enemies[i];
       if (!e.alive) continue;
@@ -1495,7 +1503,7 @@ class GameScene extends Phaser.Scene {
     tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
 
     // Damage tick (continuous)
-    const dt = this.game.loop.actualDelta * this.gameSpeed;
+    const dt = this._frameDelta * this.gameSpeed;
     tower.beamTime = (tower.beamTime || 0) + dt;
     if (tower.beamTime >= 100) {
       tower.beamTime = 0;
@@ -1523,7 +1531,7 @@ class GameScene extends Phaser.Scene {
 
   // ---------- PROJECTILES ----------
   _updateProjectiles() {
-    const dt = this.game.loop.actualDelta * this.gameSpeed;
+    const dt = this._frameDelta * this.gameSpeed;
     for (let i = this.projectiles.length-1; i >= 0; i--) {
       const p = this.projectiles[i];
       if (!p.alive) { p.sp.destroy(); this.projectiles.splice(i,1); continue; }
@@ -1695,7 +1703,7 @@ class GameScene extends Phaser.Scene {
   }
 
   _updatePowerUps() {
-    const dt = this.game.loop.actualDelta;
+    const dt = this._frameDelta;
     // Target = top-center of screen (gold area). We'll convert screen coord to world.
     const goldEl = document.getElementById('gold');
     const rect = goldEl.getBoundingClientRect();
@@ -1940,6 +1948,9 @@ class GameScene extends Phaser.Scene {
   // ---------- MAIN LOOP ----------
   update(time, delta) {
     if (!this.gameStarted || this.gameOver) return;
+    // Cache per-frame delta — Phaser 3.80.1 does NOT expose actualDelta;
+    // use the delta arg passed to update() instead.
+    this._frameDelta = delta;
     this._updateEnemies();
     this._updateTowers();
     this._updateProjectiles();
