@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Neon Defense v3</title>
+<title>Neon Defense v5</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; touch-action: none; -webkit-tap-highlight-color: transparent; }
@@ -148,6 +148,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 #gameOverScreen h1 { color: #ff4466; text-shadow: 0 0 20px #ff4466; }
 #gameOverScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
 #gameOverScreen .stats span { color: #ffcc00; font-weight: 700; }
+.best-stats { color: #8844ff; font-size: 12px; margin: -10px 0 18px; text-align: center; line-height: 1.6; text-shadow: 0 0 6px #8844ff; }
+.best-stats.new-record { color: #00ff88; text-shadow: 0 0 8px #00ff88; font-weight: 700; font-size: 14px; }
+#startBestStats { color: #44ddff; font-size: 11px; margin: -16px 0 18px; text-align: center; text-shadow: 0 0 6px #44ddff; min-height: 14px; }
 #restartBtn { border-color: #8844ff; color: #8844ff; background: rgba(136,68,255,0.12); text-shadow: 0 0 8px #8844ff; box-shadow: 0 0 16px rgba(136,68,255,0.2); }
 #winScreen { display: none; }
 #winScreen h1 { color: #00ff88; text-shadow: 0 0 20px #00ff88; }
@@ -179,6 +182,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 <div id="hud">
   <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
   <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> <span id="waveVal">0</span>/<span id="totalWaves">25</span></div>
+  <div class="hud-item" id="kills" style="color:#ffaa44;"><span class="hud-icon">💀</span> <span id="killsVal">0</span></div>
   <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span><span id="gps"></span></div>
   <div class="hud-item" id="combo"><span id="comboVal">COMBO x0</span></div>
 </div>
@@ -190,6 +194,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
   <div id="wavePreview"></div>
   <div id="countdown"></div>
   <button class="action-btn" id="sellTower">✖ Sell Selected</button>
+  <button class="action-btn" id="sellAll" style="border-color:#ff6644;color:#ff6644;text-shadow:0 0 6px #ff6644;">🗑 Sell All</button>
   <button class="action-btn" id="speedToggle">⏩ 1x</button>
   <button class="action-btn" id="muteToggle">🔊</button>
 </div>
@@ -209,12 +214,14 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 
 <div id="startScreen" class="overlay-screen">
   <h1>NEON DEFENSE</h1>
-  <div class="subtitle">⚡ v3 · Protect the Core ⚡</div>
+  <div class="subtitle">⚡ v5 · Shield & Glory ⚡</div>
+  <div id="startBestStats"></div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
-    Double-tap a placed tower → upgrade<br>
+    <b>Double-tap</b> a placed tower → upgrade<br>
     Tap 💰 to collect floating power-ups<br>
+    Beware 🛡️ <b>Nimbus</b> — shielded enemy!<br>
     Survive 25 waves to win!
   </div>
 </div>
@@ -226,6 +233,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
     Towers: <span id="finalTowers">0</span><br>
     Kills: <span id="finalKills">0</span>
   </div>
+  <div class="best-stats" id="finalBest"></div>
   <button id="restartBtn">PLAY AGAIN</button>
 </div>
 
@@ -236,6 +244,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
     Towers: <span id="winTowers">0</span> · Kills: <span id="winKills">0</span><br>
     Lives Left: <span id="winLives">20</span>
   </div>
+  <div class="best-stats" id="winBest"></div>
   <button id="restartBtn2">PLAY AGAIN</button>
 </div>
 </div>
@@ -322,6 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sw) sw.addEventListener('click', () => { if (window._gameScene && window._gameScene._startWave) window._gameScene._startWave(); });
   const st = document.getElementById('sellTower');
   if (st) st.addEventListener('click', () => { if (window._gameScene && window._gameScene._sellSelected) window._gameScene._sellSelected(); });
+  const sa = document.getElementById('sellAll');
+  if (sa) sa.addEventListener('click', () => { if (window._gameScene && window._gameScene._sellAllTowers) window._gameScene._sellAllTowers(); });
   const sp = document.getElementById('speedToggle');
   if (sp) sp.addEventListener('click', () => { if (window._gameScene) window._gameScene._toggleSpeed(); });
   const mt = document.getElementById('muteToggle');
@@ -340,10 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function isOverlayElement(el) {
       while (el && el !== document.body) {
         const id = el.id;
-        if (id && ['#hud', '#actionBar', '#towerPanel', '#powerUpBar', '#tooltip',
-                    '#gameOverScreen', '#winScreen', '#startScreen', '#modeIndicator'].includes(id)) return true;
+        if (id && ['hud', 'actionBar', 'towerPanel', 'powerUpBar', 'tooltip',
+                    'gameOverScreen', 'winScreen', 'startScreen', 'modeIndicator',
+                    'startBestStats', 'finalBest', 'winBest', 'kills', 'killsVal'].includes(id)) return true;
         const cls = el.className;
-        if (cls && typeof cls === 'string' && cls.includes &&
+        if (cls && typeof cls === 'string' && cls.includes && 
             (cls.includes('tower-btn') || cls.includes('action-btn') || cls.includes('pu-icon'))) return true;
         el = el.parentElement;
       }
@@ -408,6 +420,7 @@ const ENEMY_DEFS = {
   boss:    { hp:800, speed:20,  reward:80, color:0xff2222, r:22, name:'Boss',    icon:'👺' },
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
   swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
+  nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
 };
 
 // === POWER-UP DEFINITIONS ===
@@ -419,6 +432,48 @@ const POWERUPS = {
   decay:  { icon:'💀', name:'Decay',      dur:0,     oneShot:true,  cls:'pu-decay' },
 };
 const POWERUP_KEYS = Object.keys(POWERUPS);
+
+// === PERSISTENT HIGH SCORE ===
+const HIGHSCORE = {
+  key: 'NEON_DEFENSE_BEST',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return { bestWave:0, bestKills:0, bestScore:0 };
+      const v = JSON.parse(raw);
+      return { bestWave:v.bestWave||0, bestKills:v.bestKills||0, bestScore:v.bestScore||0 };
+    } catch(e) { return { bestWave:0, bestKills:0, bestScore:0 }; }
+  },
+  save(rec) {
+    try { localStorage.setItem(this.key, JSON.stringify(rec)); } catch(e) {}
+  },
+  compute(wave, kills, livesRemaining, towersBuilt) {
+    return wave*100 + kills*10 + livesRemaining*50 - towersBuilt*5;
+  },
+  // returns {prev, beat:bool, rec:newSaved}
+  submit(wave, kills, livesRemaining, towersBuilt) {
+    const prev = this.load();
+    const score = this.compute(wave, kills, livesRemaining, towersBuilt);
+    const newRec = {
+      bestWave: Math.max(prev.bestWave, wave),
+      bestKills: Math.max(prev.bestKills, kills),
+      bestScore: Math.max(prev.bestScore, score),
+    };
+    const beat = score > prev.bestScore;
+    this.save(newRec);
+    return { prev, score, beat, rec:newRec };
+  }
+};
+
+// Populate start screen best
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('startBestStats');
+  if (el) {
+    const r = HIGHSCORE.load();
+    if (r.bestWave > 0) el.textContent = `Your record: Wave ${r.bestWave} · Score ${r.bestScore}`;
+  }
+});
+
 
 // === PATH WAYPOINTS ===
 const PATH_POINTS = [
@@ -457,6 +512,11 @@ function getWaveEnemies(n) {
   if (n >= 7 && n % 3 === 0) {
     const cnt = 3 + Math.floor(Math.random()*3);
     for (let i = 0; i < cnt; i++) list.push('swarmer');
+  }
+  // Nimbus shielded enemies: start wave 10, every 4th wave
+  if (n >= 10 && (n - 10) % 4 === 0) {
+    const cnt = 1 + Math.floor(Math.random()*2);
+    for (let i = 0; i < cnt; i++) list.push('nimbus');
   }
   if (n % 5 === 0 && n > 0) list.push('boss');
   return list;
@@ -656,6 +716,17 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xffffaa,0.6); g.fillCircle(6,6,7);
     g.generateTexture('e_swarmer',14,14); g.destroy();
 
+    // Enemy: Nimbus (shielded blue circle with white shield arc)
+    g.clear();
+    g.fillStyle(0x44aaff,1); g.fillCircle(15,15,13);
+    g.fillStyle(0x2266aa,0.7); g.fillCircle(15,15,9);
+    g.fillStyle(0xffffff); g.fillCircle(11,12,2.5); g.fillCircle(19,12,2.5);
+    g.fillStyle(0x002244); g.fillCircle(11,12,1.2); g.fillCircle(19,12,1.2);
+    // Outer shield arc
+    g.lineStyle(2.5, 0xddeeff, 0.95); g.strokeCircle(15,15,14);
+    g.lineStyle(1.5, 0xffffff, 0.6); g.strokeCircle(15,15,11);
+    g.generateTexture('e_nimbus',30,30); g.destroy();
+
     // Projectiles
     g.clear();
     g.fillStyle(0x44ff88,1); g.fillCircle(4,4,4);
@@ -788,7 +859,22 @@ class GameScene extends Phaser.Scene {
     this.coreBarBg.fillStyle(0x000000, 0.7);
     this.coreBarBg.fillRect(bx,by,bw,bh);
     const ratio = Math.max(0, this.lives / 20);
-    this.coreBarFill.fillStyle(ratio > 0.3 ? 0x44ff88 : 0xff4444);
+
+    // Pulsing glow that gets more urgent (faster, redder) as lives drop below 7
+    let baseCol = ratio > 0.3 ? 0x44ff88 : 0xff4444;
+    let glowAlpha = 0;
+    if (this.lives <= 7 && this.lives > 0) {
+      const urgency = 1 - (this.lives / 7); // 0..1 as lives drop
+      const speed = 0.004 + urgency * 0.008;
+      const pulse = (Math.sin((this.time ? this.time.now : 0) * speed) + 1) / 2;
+      glowAlpha = 0.4 + urgency * 0.5 * pulse;
+      // shift toward red as urgency rises
+      baseCol = 0xff4444;
+      // outer glow ring around bar
+      this.coreBarBg.fillStyle(0xff2222, glowAlpha * 0.6);
+      this.coreBarBg.fillRect(bx-3, by-2, bw+6, bh+4);
+    }
+    this.coreBarFill.fillStyle(baseCol);
     this.coreBarFill.fillRect(bx,by,bw*ratio,bh);
   }
 
@@ -893,6 +979,15 @@ class GameScene extends Phaser.Scene {
     this._updateHUD();
     this._particles(x, y, def.color, 10, 70);
     this._floatText(x, y-25, 'PLACE!', def.color);
+
+    // Tower placement: brief cell flash in tower color
+    const tintHex = def.color;
+    const orig = cell.tintTopLeft;
+    cell.setTint(tintHex);
+    this.tweens.add({
+      targets: cell, alpha: 0.4, duration: 120, yoyo: true,
+      onComplete: () => { cell.clearTint(); cell.setAlpha(1); }
+    });
   }
 
   _upgradeTower(t) {
@@ -919,6 +1014,45 @@ class GameScene extends Phaser.Scene {
   }
 
   _sellSelected() { if (this.selectedTower) this._sellTower(this.selectedTower); }
+  _sellAllTowers() {
+    if (this.waveActive || this.gameOver || this.towers.length === 0) return;
+    // iterate copy
+    const all = this.towers.slice();
+    let totalRefund = 0;
+    all.forEach(t => {
+      const refund = Math.floor(t.totalSpent * 0.6);
+      totalRefund += refund;
+      if (t.body) t.body.destroy();
+      if (t.turret) t.turret.destroy();
+      if (t.rangeSprite) t.rangeSprite.destroy();
+      if (t.beam) { t.beam.destroy(); t.beam = null; }
+      if (this.grid[t.row]) this.grid[t.row][t.col]._tower = null;
+    });
+    this.gold += totalRefund;
+    this.towers = [];
+    this.selectedTower = null;
+    this._clearRange();
+    this._hideTooltip();
+    this._floatText(MAP_W/2, MAP_H/2, `Sold all! +💰${totalRefund}`, '#ffcc00');
+    this._updateHUD();
+    this._updateBtnStates();
+    this._updateSellAllBtn();
+  }
+  _updateSellAllBtn() {
+    const btn = document.getElementById('sellAll');
+    if (!btn) return;
+    if (this.waveActive || this.towers.length === 0) {
+      btn.style.opacity = '0.35';
+      btn.style.pointerEvents = 'none';
+      btn.textContent = `🗑 Sell All`;
+    } else {
+      let total = 0;
+      this.towers.forEach(t => { total += Math.floor(t.totalSpent * 0.6); });
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+      btn.textContent = `🗑 Sell All (💰${total})`;
+    }
+  }
   _sellTower(t) {
     this.gold += Math.floor(t.totalSpent*0.6);
     if (t.body) t.body.destroy();
@@ -998,6 +1132,9 @@ class GameScene extends Phaser.Scene {
     const hbBg = this.add.graphics().setDepth(5);
     const hbFill = this.add.graphics().setDepth(6);
 
+    // Nimbus shield scales with wave
+    const shieldMax = def.shieldHp ? Math.floor(def.shieldHp * (1 + (this.wave-1) * 0.08)) : 0;
+
     const enemy = {
       type, sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
       reward:def.reward, distance:0, x:PATH[0].x, y:PATH[0].y,
@@ -1008,6 +1145,8 @@ class GameScene extends Phaser.Scene {
       phased:false, phaseTimer:0, phaseCheck:0,
       // Boss
       isBoss:(type==='boss'), bossBurstTimer:0, bossSpawnTimer:0,
+      // Shield
+      shieldHp: shieldMax, shieldMax,
     };
     enemy._updateHpBar = () => {
       const bx = enemy.x-12, by = enemy.y-enemy.radius-8, bw = 24, bh = 3;
@@ -1016,13 +1155,25 @@ class GameScene extends Phaser.Scene {
       const ratio = Math.max(0, enemy.hp/enemy.maxHp);
       enemy.hbFill.fillStyle(ratio>0.5?0x44ff88:ratio>0.25?0xffaa22:0xff4444);
       enemy.hbFill.fillRect(bx,by,bw*ratio,bh);
+      // Shield bar overlay (above hp bar)
+      if (enemy.shieldMax > 0 && enemy.shieldHp > 0) {
+        const sby = by - 4;
+        enemy.hbBg.fillStyle(0x000,0.6); enemy.hbBg.fillRect(bx,sby,bw,bh);
+        const sr = Math.max(0, enemy.shieldHp/enemy.shieldMax);
+        enemy.hbFill.fillStyle(0x66ccff);
+        enemy.hbFill.fillRect(bx,sby,bw*sr,bh);
+      }
     };
     enemy._updateHpBar();
     this.enemies.push(enemy);
 
     if (enemy.isBoss) {
       this.bossList.push(enemy);
-      this.cameras.main.shake(400, 0.008);
+      // Enhanced boss spawn: bigger shake, red camera flash, expanding red ring
+      this.cameras.main.shake(600, 0.012);
+      this.cameras.main.flash(300, 255, 0, 0, true);
+      const ring = this.add.image(enemy.x, enemy.y, 'ring').setDepth(7).setTint(0xff2222).setScale(0.1);
+      this.tweens.add({targets:ring, scale:3.5, alpha:0, duration:900, ease:'Power2', onComplete:()=>ring.destroy()});
       this._floatText(enemy.x, enemy.y-30, '⚠ BOSS ⚠', '#ff2222');
     }
   }
@@ -1192,7 +1343,10 @@ class GameScene extends Phaser.Scene {
 
     SFX.death();
     this.cameras.main.shake(80, 0.003);
-    this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, 10, 60);
+    // Particle variety by enemy type
+    const partCounts = { boss:25, tank:15, healer:6, swarmer:6, fast:8, phase:8, normal:10, nimbus:14 };
+    const pc = partCounts[e.type] || 10;
+    this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, pc, 60);
     this._floatText(e.x, e.y-e.radius-10, `+${e.reward}`, '#ffcc00');
     if (bonus > 0) this._floatText(e.x+15, e.y-e.radius-15, `+${bonus}`, '#ffdd44');
 
@@ -1218,6 +1372,8 @@ class GameScene extends Phaser.Scene {
       this.goldEarned += bonus;
       SFX.waveClear();
       this._floatText(MAP_W/2, MAP_H/2-20, `WAVE ${this.wave} CLEAR! +${bonus}`, '#00ff88');
+      // Burst of 20 golden particles at screen center
+      this._particles(MAP_W/2, MAP_H/2, 0xffcc00, 20, 130);
       this._updateHUD();
       document.getElementById('startWave').style.display = '';
       if (this.wave >= TOTAL_WAVES) { this._win(); }
@@ -1299,7 +1455,7 @@ class GameScene extends Phaser.Scene {
     if (tower.beamTime >= 100) {
       tower.beamTime = 0;
       const tickDmg = Math.floor(tower.damage * 0.1 * (1 + (tower.beamW-2)*0.3)) * rapidMul;
-      this._hit(best, tickDmg);
+      this._hit(best, tickDmg, 'laser');
       if (Math.random() < 0.3) SFX.shoot('laser');
     }
   }
@@ -1353,13 +1509,13 @@ class GameScene extends Phaser.Scene {
 
       const dx = p.x-tx, dy = p.y-ty, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < 12 && p.target && p.target.alive) {
-        this._hit(p.target, p.damage);
+        this._hit(p.target, p.damage, p.key);
 
         if (p.aoeR > 0) {
           this.enemies.forEach(e => {
             if (!e.alive || e === p.target) return;
             if (Phaser.Math.Distance.Between(p.x,p.y,e.x,e.y) <= p.aoeR)
-              this._hit(e, Math.floor(p.damage*0.5));
+              this._hit(e, Math.floor(p.damage*0.5), p.key);
           });
           this._aoeExplosion(p.x, p.y, p.aoeR);
         }
@@ -1386,17 +1542,68 @@ class GameScene extends Phaser.Scene {
   }
 
   _hit(enemy, dmg, kind) {
-    // Boss weak point: sniper/lightning bonus
     let finalDmg = dmg;
-    let color = '#ff4466';
+    let isCrit = false;
+    // Boss weak point: sniper/lightning bonus
     if (enemy.isBoss && (kind === 'sniper' || kind === 'lightning')) {
       finalDmg = Math.floor(dmg * 1.4);
-      color = '#ff8844';
+      isCrit = true;
     }
-    if (kind === 'shield') color = '#44ddff';
+
+    // Shield absorbs first (Nimbus etc.)
+    if (enemy.shieldHp && enemy.shieldHp > 0) {
+      // sniper/lightning deal 1.5x to shield
+      const shieldMul = (kind === 'sniper' || kind === 'lightning') ? 1.5 : 1;
+      const shieldDmg = Math.floor(finalDmg * shieldMul);
+      const absorbed = Math.min(enemy.shieldHp, shieldDmg);
+      enemy.shieldHp -= absorbed;
+      // Float shield damage (cyan)
+      const sxOff = (Math.random()-0.5)*16;
+      this._floatDmg(enemy.x + sxOff, enemy.y-enemy.radius-12, absorbed, 'shield', isCrit);
+      this._particles(enemy.x, enemy.y, 0x66ccff, 3, 25);
+      if (enemy.shieldHp <= 0) {
+        // Shield broken!
+        enemy.shieldHp = 0;
+        SFX.explosion();
+        this.cameras.main.shake(100, 0.005);
+        this._particles(enemy.x, enemy.y, 0x44aaff, 18, 90);
+        this._floatText(enemy.x, enemy.y-enemy.radius-22, 'SHIELD BREAK!', '#44ddff');
+        const ring = this.add.image(enemy.x, enemy.y, 'ring').setDepth(6).setTint(0x44aaff).setScale(0.1);
+        this.tweens.add({targets:ring, scale:1.5, alpha:0, duration:400, ease:'Power2', onComplete:()=>ring.destroy()});
+      }
+      return; // shield blocks all damage this tick
+    }
+
     enemy.hp -= finalDmg;
-    this._floatText(enemy.x, enemy.y-enemy.radius-5, `-${finalDmg}`, color, true);
+    const sxOff = (Math.random()-0.5)*16;
+    this._floatDmg(enemy.x + sxOff, enemy.y-enemy.radius-5, finalDmg, kind, isCrit);
     this._particles(enemy.x, enemy.y, 0xffffff, 4, 25);
+  }
+
+  // Enhanced damage number rendering — scaled by damage, color coded, boss crit indicator
+  _floatDmg(x, y, dmg, kind, isCrit) {
+    let size = '11px';
+    if (dmg >= 30) size = '16px';
+    else if (dmg >= 16) size = '13px';
+
+    let color = '#44ff88';
+    if (kind === 'shield') color = '#66ccff';
+    else if (dmg > 60) color = '#ff4444';
+    else if (dmg > 30) color = '#ff8844';
+    else if (dmg > 15) color = '#ffdd44';
+
+    let txt = `-${dmg}`;
+    if (isCrit) { txt = `💥${dmg}`; size = '16px'; color = '#ffaa44'; }
+
+    const t = this.add.text(x,y,txt,{
+      fontSize:size, fontFamily:'Segoe UI,system-ui,sans-serif',
+      color, fontStyle:'bold', stroke:'#000', strokeThickness:3
+    }).setOrigin(0.5).setDepth(8).setScale(0.5);
+    this.tweens.add({targets:t, scale:1.15, duration:110, ease:'Back.out',
+      onComplete: () => {
+        this.tweens.add({targets:t, y:y-38, alpha:0, scale:0.9, duration:520, ease:'Cubic.out', onComplete:()=>t.destroy()});
+      }
+    });
   }
 
   _chainLightning(src, count, range, dmg) {
@@ -1610,6 +1817,12 @@ class GameScene extends Phaser.Scene {
     document.getElementById('finalWave').textContent = this.wave;
     document.getElementById('finalTowers').textContent = this.towersBuilt;
     document.getElementById('finalKills').textContent = this.enemiesKilled;
+    const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
+    const bestEl = document.getElementById('finalBest');
+    if (bestEl) {
+      bestEl.textContent = `Score: ${res.score} · Best wave: ${res.rec.bestWave} · Best score: ${res.rec.bestScore}`;
+      if (res.beat) { bestEl.classList.add('new-record'); bestEl.textContent = `🏅 NEW RECORD! Score ${res.score} (best wave ${res.rec.bestWave})`; }
+    }
     document.getElementById('gameOverScreen').style.display = 'flex';
     if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
   }
@@ -1618,6 +1831,12 @@ class GameScene extends Phaser.Scene {
     document.getElementById('winTowers').textContent = this.towersBuilt;
     document.getElementById('winKills').textContent = this.enemiesKilled;
     document.getElementById('winLives').textContent = this.lives;
+    const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
+    const bestEl = document.getElementById('winBest');
+    if (bestEl) {
+      bestEl.textContent = `Score: ${res.score} · Best score: ${res.rec.bestScore}`;
+      if (res.beat) { bestEl.classList.add('new-record'); bestEl.textContent = `🏅 NEW RECORD! Score ${res.score}`; }
+    }
     document.getElementById('winScreen').style.display = 'flex';
     if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
   }
@@ -1642,8 +1861,11 @@ class GameScene extends Phaser.Scene {
     document.getElementById('livesVal').textContent = this.lives;
     document.getElementById('goldVal').textContent = this.gold;
     document.getElementById('waveVal').textContent = this.wave;
+    const kEl = document.getElementById('killsVal');
+    if (kEl) kEl.textContent = this.enemiesKilled;
     this.redrawCoreBar();
     this._updateBtnStates();
+    if (this._updateSellAllBtn) this._updateSellAllBtn();
 
     // Combo display
     const comboEl = document.getElementById('combo');
@@ -1677,6 +1899,9 @@ class GameScene extends Phaser.Scene {
     this._updateTowers();
     this._updateProjectiles();
     this._updatePowerUps();
+
+    // Continuously redraw core bar for pulse animation when lives are low
+    if (this.lives <= 7 && this.lives > 0) this.redrawCoreBar();
 
     // Combo decay
     if (this.combo > 0 && time - this.lastKillTime > 2000) {
