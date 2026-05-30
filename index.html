@@ -862,10 +862,22 @@ class GameScene extends Phaser.Scene {
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
     this.pathGfx.lineStyle(2, 0x444488, 0.25);
-    this.pathGfx.setLineDash([6,6]);
-    for (let i = 1; i < PATH.length; i++)
-      this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
-    this.pathGfx.setLineDash([]);
+    // NOTE: setLineDash() is a Canvas 2D method — Phaser.GameObjects.Graphics doesn't have it.
+    // Simulate dashed line by drawing short segments along each path edge.
+    const DASH = 6, GAP = 6;
+    for (let i = 1; i < PATH.length; i++) {
+      const ax = PATH[i-1].x, ay = PATH[i-1].y;
+      const bx = PATH[i].x,   by = PATH[i].y;
+      const dx = bx - ax, dy = by - ay;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const ux = dx / len, uy = dy / len;
+      let t = 0;
+      while (t < len) {
+        const t2 = Math.min(t + DASH, len);
+        this.pathGfx.lineBetween(ax + ux*t, ay + uy*t, ax + ux*t2, ay + uy*t2);
+        t = t2 + GAP;
+      }
+    }
 
     const sp = this.add.image(PATH[0].x, PATH[0].y, 'spawn').setDepth(1);
     this.add.text(PATH[0].x, PATH[0].y+22, 'SPAWN', {fontSize:'9px',color:'#ff4466',fontFamily:'Segoe UI,system-ui,sans-serif'})
