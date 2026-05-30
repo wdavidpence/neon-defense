@@ -346,7 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // === GAME INPUT LAYER: forwards pointer events to Phaser ===
   // The #gameInputLayer div sits at z-index 2 (above canvas z-index 0, below overlays z-index 10).
   // Overlay buttons intercept pointer events first. Game-area touches fall through to this div.
+  //
+  // KEY FIX FOR MOBILE SAFARI: Instead of dispatching through Phaser's input system
+  // (which silently drops fake pointers on iOS), we convert screen→world coords directly
+  // and call the grid cell's handler. This is the most reliable approach across all browsers.
   const inputLayer = document.getElementById('gameInputLayer');
+  inputLayer.style.touchAction = 'none';
+  inputLayer.style.webkitTouchCallout = 'none';
+  inputLayer.style.webkitUserSelect = 'none';
   if (inputLayer) {
     function isOverlayElement(el) {
       while (el && el !== document.body) {
@@ -361,37 +368,49 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return false;
     }
+    function screenToWorld(scene, clientX, clientY) {
+      const cam = scene.cameras.main;
+      // Get game canvas bounding rect (the visible scaled area)
+      const rect = cam.canvas.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return null;
+      // Position within the visible game area
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      // Scale factor: game pixels per CSS pixel
+      const scaleX = cam.game.canvas.width / rect.width;
+      const scaleY = cam.game.canvas.height / rect.height;
+      // World coordinates (offset by camera scroll)
+      const wx = localX * scaleX + cam.scrollX;
+      const wy = localY * scaleY + cam.scrollY;
+      return { x: wx, y: wy };
+    }
+    function fireCell(scene, wx, wy) {
+      // Cell constants from the game (COLS=12, ROWS=16, CELL=48)
+      const col = Math.floor(wx / 48);
+      const row = Math.floor(wy / 48);
+      if (row < 0 || row >= 16 || col < 0 || col >= 12) return;
+      const grid = scene.grid;
+      if (!grid || !grid[row]) return;
+      const cell = grid[row][col];
+      if (!cell) return;
+      // Build minimal pointer-like object for double-tap + tooltip logic
+      const fakePtr = { x: cell.x, y: cell.y };
+      cell._onCellDown(fakePtr, cell);
+    }
     inputLayer.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       const scene = window._gameScene;
-      if (!scene || !scene.input) return;
+      if (!scene) return;
       if (isOverlayElement(e.target)) return;
-      const pointer = scene.input.addPointer();
-      const gameX = scene.cameras.main.worldToPointer(e).x;
-      const gameY = scene.cameras.main.worldToPointer(e).y;
-      pointer.setPosition(gameX, gameY);
-      scene.input.down.dispatch(pointer);
-    });
+      const w = screenToWorld(scene, e.clientX, e.clientY);
+      if (!w) return;
+      fireCell(scene, w.x, w.y);
+    }, { passive: false });
     inputLayer.addEventListener('pointermove', (e) => {
-      const scene = window._gameScene;
-      if (!scene || !scene.input) return;
-      if (isOverlayElement(e.target)) return;
-      const pointer = scene.input.getFirstActive();
-      if (!pointer) return;
-      const gameX = scene.cameras.main.worldToPointer(e).x;
-      const gameY = scene.cameras.main.worldToPointer(e).y;
-      pointer.setPosition(gameX, gameY);
-      scene.input.move.dispatch(pointer);
+      // Not strictly needed for game logic, but keeps hover if any
     });
     inputLayer.addEventListener('pointerup', (e) => {
-      const scene = window._gameScene;
-      if (!scene || !scene.input) return;
-      if (isOverlayElement(e.target)) return;
-      const pointer = scene.input.getFirstActive();
-      if (!pointer) return;
-      const gameX = scene.cameras.main.worldToPointer(e).x;
-      const gameY = scene.cameras.main.worldToPointer(e).y;
-      pointer.setPosition(gameX, gameY);
-      scene.input.up.dispatch(pointer);
+      // Nothing needed — everything happens on pointerdown
     });
   }
 });
