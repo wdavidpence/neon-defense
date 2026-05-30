@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Neon Defense</title>
+<title>Neon Defense v3</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; touch-action: none; -webkit-tap-highlight-color: transparent; }
-#gameContainer { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+#gameContainer { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
 #gameContainer canvas { z-index: 0 !important; }
 
 /* HUD Overlay */
@@ -16,7 +16,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
   display: flex; justify-content: space-around; align-items: center;
   padding: 6px 8px;
   background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-  pointer-events: none; font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Segoe UI', system-ui, sans-serif;
 }
 .hud-item {
   display: flex; align-items: center; gap: 4px;
@@ -25,18 +25,43 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 }
 .hud-icon { font-size: 16px; }
 #lives { color: #ff4466; }
-#gold { color: #ffcc00; }
+#gold { color: #ffcc00; cursor: pointer; padding: 3px 6px; border-radius: 6px; transition: background 0.2s; }
+#gold.has-powerups { background: rgba(255,204,0,0.18); box-shadow: 0 0 10px rgba(255,204,0,0.4); }
 #wave { color: #88ddff; }
+#gps { color: #88ff88; font-size: 9px; font-weight: 600; margin-left: 3px; opacity: 0.8; }
+#combo { color: #44ff88; font-size: 14px; font-weight: 900; display: none; text-shadow: 0 0 10px currentColor; }
+#combo.active { display: flex; }
+
+/* Power-up Bar */
+#powerUpBar {
+  position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 10;
+  display: flex; gap: 6px; pointer-events: none;
+}
+.pu-icon {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: rgba(15,15,35,0.95); border: 2px solid #888;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; pointer-events: auto;
+  box-shadow: 0 0 12px currentColor; transition: transform 0.15s;
+  user-select: none; touch-action: manipulation;
+}
+.pu-icon:active { transform: scale(0.9); }
+.pu-icon.pu-rapid { color: #ff6644; border-color: #ff6644; }
+.pu-icon.pu-shield { color: #44ddff; border-color: #44ddff; }
+.pu-icon.pu-nova { color: #ffdd44; border-color: #ffdd44; }
+.pu-icon.pu-meteor { color: #ff8844; border-color: #ff8844; }
+.pu-icon.pu-decay { color: #aa66ff; border-color: #aa66ff; }
+.pu-timer { position: absolute; bottom: -10px; font-size: 9px; color: #fff; font-weight: 700; }
 
 /* Tower Panel */
 #towerPanel {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
-  display: flex; gap: 4px; padding: 6px 8px 10px;
+  display: flex; gap: 3px; padding: 6px 4px 10px;
   background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 70%, transparent 100%);
   justify-content: center; flex-wrap: wrap;
 }
 .tower-btn {
-  min-width: 58px; padding: 5px 4px; border: 2px solid #333; border-radius: 8px;
+  min-width: 52px; padding: 4px 3px; border: 2px solid #333; border-radius: 8px;
   background: rgba(15,15,35,0.95); color: #fff; font-size: 9px; font-weight: 600;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; cursor: pointer; transition: all 0.15s;
@@ -45,17 +70,17 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 }
 .tower-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.06); }
 .tower-btn.disabled { opacity: 0.35; pointer-events: none; filter: grayscale(1); }
-.tower-btn .t-icon { font-size: 20px; line-height: 1; }
+.tower-btn .t-icon { font-size: 18px; line-height: 1; }
 .tower-btn .t-cost { color: #ffcc00; font-size: 10px; font-weight: 700; }
 .tower-btn .t-name { color: #aaa; font-size: 8px; }
 
 /* Action Buttons */
 #actionBar {
   position: absolute; top: 44px; right: 8px; z-index: 10;
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
 }
 .action-btn {
-  padding: 6px 12px; border: 2px solid; border-radius: 6px;
+  padding: 6px 10px; border: 2px solid; border-radius: 6px;
   background: rgba(15,15,35,0.9); color: #fff; font-size: 10px; font-weight: 700;
   cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif;
   text-transform: uppercase; letter-spacing: 0.5px; user-select: none;
@@ -63,6 +88,17 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 }
 #startWave { border-color: #00ff88; color: #00ff88; text-shadow: 0 0 6px #00ff88; }
 #sellTower { border-color: #ff6644; color: #ff6644; text-shadow: 0 0 6px #ff6644; }
+#speedToggle { border-color: #44ddff; color: #44ddff; text-shadow: 0 0 6px #44ddff; }
+#muteToggle { border-color: #aaaaaa; color: #aaaaaa; padding: 4px 8px; font-size: 12px; }
+#wavePreview {
+  background: rgba(15,15,35,0.9); border: 1px solid #446; border-radius: 6px;
+  padding: 4px 6px; display: flex; gap: 3px; font-size: 14px; max-width: 120px; flex-wrap: wrap;
+}
+#countdown {
+  color: #ffcc00; font-size: 10px; padding: 3px 6px;
+  background: rgba(15,15,35,0.9); border: 1px solid #ffcc00; border-radius: 6px;
+  text-shadow: 0 0 4px #ffcc00; display: none;
+}
 
 /* Mode indicator */
 #modeIndicator {
@@ -80,12 +116,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
-.overlay-screen h1 {
-  font-size: 36px; margin-bottom: 6px; letter-spacing: 3px;
-}
-.overlay-screen .subtitle {
-  font-size: 14px; margin-bottom: 30px;
-}
+.overlay-screen h1 { font-size: 36px; margin-bottom: 6px; letter-spacing: 3px; }
+.overlay-screen .subtitle { font-size: 14px; margin-bottom: 30px; }
 .overlay-screen button {
   padding: 14px 40px; font-size: 18px; font-weight: 700;
   border: 2px solid; border-radius: 10px; cursor: pointer;
@@ -97,18 +129,15 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
   margin-top: 24px; color: #667; font-size: 12px; text-align: center; line-height: 1.9;
   max-width: 320px;
 }
-
 #startScreen { background: radial-gradient(ellipse at center, #0a0a2e 0%, #050510 100%); }
 #startScreen h1 { color: #fff; text-shadow: 0 0 20px #8844ff, 0 0 40px #8844ff; }
 #startScreen .subtitle { color: #8844ff; text-shadow: 0 0 8px #8844ff; }
 #startBtn { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.12); text-shadow: 0 0 8px #00ff88; box-shadow: 0 0 16px rgba(0,255,136,0.25); }
-
 #gameOverScreen { display: none; }
 #gameOverScreen h1 { color: #ff4466; text-shadow: 0 0 20px #ff4466; }
 #gameOverScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
 #gameOverScreen .stats span { color: #ffcc00; font-weight: 700; }
 #restartBtn { border-color: #8844ff; color: #8844ff; background: rgba(136,68,255,0.12); text-shadow: 0 0 8px #8844ff; box-shadow: 0 0 16px rgba(136,68,255,0.2); }
-
 #winScreen { display: none; }
 #winScreen h1 { color: #00ff88; text-shadow: 0 0 20px #00ff88; }
 #winScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
@@ -133,12 +162,19 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 <div id="hud">
   <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
   <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> <span id="waveVal">0</span>/<span id="totalWaves">25</span></div>
-  <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span></div>
+  <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span><span id="gps"></span></div>
+  <div class="hud-item" id="combo"><span id="comboVal">COMBO x0</span></div>
 </div>
+
+<div id="powerUpBar"></div>
 
 <div id="actionBar">
   <button class="action-btn" id="startWave">▶ Start Wave</button>
+  <div id="wavePreview"></div>
+  <div id="countdown"></div>
   <button class="action-btn" id="sellTower">✖ Sell Selected</button>
+  <button class="action-btn" id="speedToggle">⏩ 1x</button>
+  <button class="action-btn" id="muteToggle">🔊</button>
 </div>
 <div id="modeIndicator"></div>
 
@@ -156,12 +192,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 
 <div id="startScreen" class="overlay-screen">
   <h1>NEON DEFENSE</h1>
-  <div class="subtitle">⚡ Protect the Core ⚡</div>
+  <div class="subtitle">⚡ v3 · Protect the Core ⚡</div>
   <button id="startBtn">START</button>
   <div class="instructions">
-    Select a tower below → tap a cell on the grid to place<br>
-    Tap a placed tower → upgrade it<br>
-    Press ✖ button → sell the selected tower<br>
+    Select a tower → tap a cell to place<br>
+    Double-tap a placed tower → upgrade<br>
+    Tap 💰 to collect floating power-ups<br>
     Survive 25 waves to win!
   </div>
 </div>
@@ -189,39 +225,95 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 <script>
-// Safety net: register start button handler immediately, before Phaser boots
+// =============== SOUND MANAGER (Web Audio API) ===============
+const SFX = {
+  ctx: null, vol: 0.3, muted: false,
+  init() {
+    if (this.ctx) return;
+    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  },
+  _tone(freq1, freq2, dur, type='sine', volMul=1) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq1, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,freq2), now+dur);
+    gain.gain.setValueAtTime(this.vol*volMul, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now+dur);
+  },
+  _noise(dur, freq=400, volMul=0.5) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const bufSize = ctx.sampleRate * dur;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random()*2-1) * (1 - i/bufSize);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value = freq;
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(this.vol*volMul, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    src.start(now);
+  },
+  shoot(type) {
+    switch(type) {
+      case 'archer': this._tone(800, 400, 0.08, 'square', 0.4); break;
+      case 'cannon': this._tone(200, 80, 0.18, 'sawtooth', 0.6); break;
+      case 'ice': this._tone(1200, 800, 0.15, 'sine', 0.35); break;
+      case 'lightning': this._tone(600, 200, 0.12, 'sawtooth', 0.5); break;
+      case 'sniper': this._tone(1500, 200, 0.08, 'square', 0.45); break;
+      case 'laser': this._tone(900, 1100, 0.06, 'sine', 0.25); break;
+      case 'rocket': this._tone(300, 600, 0.15, 'triangle', 0.4); break;
+    }
+  },
+  death() { this._noise(0.15, 1500, 0.4); this._tone(400, 100, 0.1, 'triangle', 0.3); },
+  waveStart() {
+    [400, 500, 600, 800].forEach((f, i) =>
+      setTimeout(() => this._tone(f, f*1.2, 0.12, 'square', 0.35), i*80));
+  },
+  waveClear() {
+    [523, 659, 784, 1047].forEach((f, i) =>
+      setTimeout(() => this._tone(f, f, 0.3, 'sine', 0.3), i*100));
+  },
+  powerUp() {
+    [600, 900, 1200].forEach((f, i) =>
+      setTimeout(() => this._tone(f, f*1.3, 0.1, 'sine', 0.4), i*50));
+  },
+  explosion() { this._noise(0.35, 250, 0.6); },
+  toggle() { this.muted = !this.muted; return this.muted; }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('startBtn');
   if (btn) btn.addEventListener('click', () => {
-    // Hide start screen
+    SFX.init();
     document.getElementById('startScreen').style.display = 'none';
-    // Try Phaser method first
-    if (window._gameScene && window._gameScene._begin) {
-      window._gameScene._begin();
-    } else {
-      // Phaser not ready yet — show canvas manually
+    if (window._gameScene && window._gameScene._begin) window._gameScene._begin();
+    else {
       const cv = document.querySelector('canvas');
-      if (cv) {
-        cv.style.display = 'block';
-        cv.style.pointerEvents = 'auto';
-      }
+      if (cv) { cv.style.visibility = 'visible'; cv.style.pointerEvents = 'auto'; }
     }
   });
-  // Also handle restart buttons
   ['restartBtn','restartBtn2'].forEach(id => {
     const b = document.getElementById(id);
     if (b) b.addEventListener('click', () => location.reload());
   });
-  // Start wave button
   const sw = document.getElementById('startWave');
-  if (sw) sw.addEventListener('click', () => {
-    if (window._gameScene && window._gameScene._startWave) window._gameScene._startWave();
-  });
-  // Sell tower button
+  if (sw) sw.addEventListener('click', () => { if (window._gameScene && window._gameScene._startWave) window._gameScene._startWave(); });
   const st = document.getElementById('sellTower');
-  if (st) st.addEventListener('click', () => {
-    if (window._gameScene && window._gameScene._sellSelected) window._gameScene._sellSelected();
+  if (st) st.addEventListener('click', () => { if (window._gameScene && window._gameScene._sellSelected) window._gameScene._sellSelected(); });
+  const sp = document.getElementById('speedToggle');
+  if (sp) sp.addEventListener('click', () => { if (window._gameScene) window._gameScene._toggleSpeed(); });
+  const mt = document.getElementById('muteToggle');
+  if (mt) mt.addEventListener('click', () => {
+    const muted = SFX.toggle();
+    mt.textContent = muted ? '🔇' : '🔊';
   });
+  const gold = document.getElementById('gold');
+  if (gold) gold.addEventListener('click', () => { if (window._gameScene) window._gameScene._collectPowerUps(); });
 });
 
 const COLS = 12, ROWS = 16, CELL = 48;
@@ -230,21 +322,35 @@ const TOTAL_WAVES = 25;
 
 // === TOWER DEFINITIONS ===
 const TOWER_DEFS = {
-  archer:   { name:'Archer',  icon:'🏹', cost:60,  dmg:18,  range:130, fireRate:750, color:0x44ff88, pCol:0x44ff88, type:'single',  pSpeed:380 },
-  cannon:   { name:'Cannon',  icon:'💥', cost:130, dmg:50,  range:100, fireRate:1800, color:0xff6644, pCol:0xff6644, type:'aoe',     pSpeed:200, aoeR:55 },
-  ice:      { name:'Cryo',    icon:'❄️', cost:100, dmg:10,  range:120, fireRate:1100, color:0x44ddff, pCol:0x44ddff, type:'slow',    pSpeed:300, slowF:0.35, slowD:2500 },
-  lightning:{ name:'Tesla',   icon:'⚡', cost:200, dmg:28,  range:140, fireRate:1300, color:0xffdd44, pCol:0xffdd44, type:'chain',   pSpeed:600, chainN:3, chainR:90 },
-  sniper:   { name:'Sniper',  icon:'🎯', cost:175, dmg:75,  range:200, fireRate:2200, color:0xff44aa, pCol:0xff44aa, type:'single',  pSpeed:600 },
+  archer:    { name:'Archer',  icon:'🏹', cost:60,  dmg:18,  range:130, fireRate:750,  color:0x44ff88, pCol:0x44ff88, type:'single',  pSpeed:380 },
+  cannon:    { name:'Cannon',  icon:'💥', cost:130, dmg:50,  range:100, fireRate:1800, color:0xff6644, pCol:0xff6644, type:'aoe',     pSpeed:200, aoeR:55 },
+  ice:       { name:'Cryo',    icon:'❄️', cost:100, dmg:10,  range:120, fireRate:1100, color:0x44ddff, pCol:0x44ddff, type:'slow',    pSpeed:300, slowF:0.35, slowD:2500 },
+  lightning: { name:'Tesla',   icon:'⚡', cost:200, dmg:28,  range:140, fireRate:1300, color:0xffdd44, pCol:0xffdd44, type:'chain',   pSpeed:600, chainN:3, chainR:90 },
+  sniper:    { name:'Sniper',  icon:'🎯', cost:175, dmg:75,  range:200, fireRate:2200, color:0xff44aa, pCol:0xff44aa, type:'single',  pSpeed:600 },
+  laser:     { name:'Laser',   icon:'💎', cost:250, dmg:30,  range:130, fireRate:100,  color:0x66ffff, pCol:0x66ffff, type:'beam',    pSpeed:0,   beamW:2 },
+  rocket:    { name:'Rocket',  icon:'🚀', cost:280, dmg:65,  range:160, fireRate:2500, color:0xffaa44, pCol:0xffaa44, type:'homing',  pSpeed:150, aoeR:45 },
 };
 
 // === ENEMY DEFINITIONS ===
 const ENEMY_DEFS = {
-  normal: { hp:60,  speed:48, reward:10, color:0xff3366, r:12, name:'Scout' },
-  fast:   { hp:35,  speed:80, reward:12, color:0xffaa22, r:9,  name:'Runner' },
-  tank:   { hp:200, speed:26, reward:25, color:0x8844ff, r:16, name:'Heavy' },
-  healer: { hp:80,  speed:38, reward:20, color:0x44ffaa, r:13, name:'Healer', heals:true },
-  boss:   { hp:800, speed:20, reward:80, color:0xff2222, r:22, name:'Boss' },
+  normal:  { hp:60,  speed:48,  reward:10, color:0xff3366, r:12, name:'Scout',   icon:'👹' },
+  fast:    { hp:35,  speed:80,  reward:12, color:0xffaa22, r:9,  name:'Runner',  icon:'💨' },
+  tank:    { hp:200, speed:26,  reward:25, color:0x8844ff, r:16, name:'Heavy',   icon:'🛡️' },
+  healer:  { hp:80,  speed:38,  reward:20, color:0x44ffaa, r:13, name:'Healer',  icon:'✚', heals:true },
+  boss:    { hp:800, speed:20,  reward:80, color:0xff2222, r:22, name:'Boss',    icon:'👺' },
+  phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
+  swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
 };
+
+// === POWER-UP DEFINITIONS ===
+const POWERUPS = {
+  rapid:  { icon:'🔥', name:'Rapid Fire', dur:8000,  oneShot:false, cls:'pu-rapid' },
+  shield: { icon:'🛡️', name:'Shield',     dur:15000, oneShot:false, cls:'pu-shield' },
+  nova:   { icon:'⚡', name:'Chain Nova', dur:12000, oneShot:false, cls:'pu-nova' },
+  meteor: { icon:'☄️', name:'Meteor',     dur:0,     oneShot:true,  cls:'pu-meteor' },
+  decay:  { icon:'💀', name:'Decay',      dur:0,     oneShot:true,  cls:'pu-decay' },
+};
+const POWERUP_KEYS = Object.keys(POWERUPS);
 
 // === PATH WAYPOINTS ===
 const PATH_POINTS = [
@@ -253,8 +359,6 @@ const PATH_POINTS = [
   {x:1, y:8},  {x:0, y:5},
 ];
 const PATH = PATH_POINTS.map(p => ({x: p.x*CELL+CELL/2, y: p.y*CELL+CELL/2}));
-
-// Path distances
 const pDist = [0];
 for (let i = 1; i < PATH.length; i++) {
   const dx = PATH[i].x-PATH[i-1].x, dy = PATH[i].y-PATH[i-1].y;
@@ -277,20 +381,24 @@ function getWaveEnemies(n) {
   const list = [];
   if (n <= 4) { for (let i = 0; i < 5+n*2; i++) list.push('normal'); }
   else if (n <= 8) { for (let i = 0; i < 8+n*2; i++) { list.push(i%5===0?'fast':'normal'); } }
-  else if (n <= 12) { for (let i = 0; i < 10+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':'normal'); } }
-  else if (n <= 16) { for (let i = 0; i < 12+n; i++) { const m=i%6; list.push(m===0?'tank':m===1?'fast':m===3&&n>=14?'healer':'normal'); } }
-  else if (n <= 20) { for (let i = 0; i < 14+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':m===2&&n%2===0?'healer':'normal'); } }
-  else { for (let i = 0; i < 16+n; i++) { const m=i%4; list.push(m===0?'tank':m===1?'fast':'normal'); } }
+  else if (n <= 12) { for (let i = 0; i < 10+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':m===2&&n>=11?'phase':'normal'); } }
+  else if (n <= 16) { for (let i = 0; i < 12+n; i++) { const m=i%6; list.push(m===0?'tank':m===1?'fast':m===2?'phase':m===3&&n>=14?'healer':'normal'); } }
+  else if (n <= 20) { for (let i = 0; i < 14+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':m===2&&n%2===0?'healer':m===3?'phase':'normal'); } }
+  else { for (let i = 0; i < 16+n; i++) { const m=i%4; list.push(m===0?'tank':m===1?'fast':m===2?'phase':'normal'); } }
+  // Add a swarmer cluster every 3rd wave
+  if (n >= 7 && n % 3 === 0) {
+    const cnt = 3 + Math.floor(Math.random()*3);
+    for (let i = 0; i < cnt; i++) list.push('swarmer');
+  }
   if (n % 5 === 0 && n > 0) list.push('boss');
   return list;
 }
 
 function getEnemyHp(n, type) {
   const def = ENEMY_DEFS[type];
-  return Math.floor(def.hp * (1 + (n-1) * 0.08)); // 8% scaling (was 15% — too aggressive)
+  return Math.floor(def.hp * (1 + (n-1) * 0.08));
 }
 
-// === IS PATH CELL ===
 function isPathCell(col, row) {
   for (let i = 0; i < PATH_POINTS.length-1; i++) {
     const a = PATH_POINTS[i], b = PATH_POINTS[i+1];
@@ -301,36 +409,42 @@ function isPathCell(col, row) {
 }
 
 // ============================================================
-//  SCENE
-// ============================================================
 class GameScene extends Phaser.Scene {
   constructor() { super({key:'GS'}); }
 
   create() {
-    // Expose scene globally for safety-net button handlers
     window._gameScene = this;
-    // State
     this.gold = 250; this.lives = 20; this.wave = 0;
     this.waveActive = false; this.enemiesRemaining = 0;
     this.spawnQueue = []; this.towersBuilt = 0; this.enemiesKilled = 0;
     this.gameStarted = false; this.gameOver = false;
     this.towerSelected = null; this.selectedTower = null;
-    this.doubleTapTimer = null; this.doubleTapCell = null; this.doubleTapTime = 0;
+    this.doubleTapCell = null; this.doubleTapTime = 0;
 
     this.enemies = []; this.towers = []; this.projectiles = [];
+    this.beams = []; this.powerUps = []; // floating power-up pickups
+    this.inventory = []; // collected power-ups
+    this.activePowers = {}; // name -> expireTime
+    this.shieldBuffer = 0;
+    this.meteorMode = false;
 
-    // Block canvas touches so overlays work during start screen
+    // Combo
+    this.combo = 0; this.lastKillTime = 0;
+    // Speed
+    this.gameSpeed = 1;
+    // Gold tracking for GPS
+    this.goldEarned = 0; this.goldStartTime = 0; this.lastGpsUpdate = 0;
+    // Auto-start
+    this.autoStartTimer = 0;
+    // Boss tracking
+    this.bossList = [];
+
     const cv = document.querySelector('canvas');
-    if (cv) {
-      cv.style.pointerEvents = 'none';
-      cv.style.display = 'none';
-    }
+    if (cv) { cv.style.pointerEvents = 'none'; cv.style.visibility = 'hidden'; }
     this._canvas = cv;
 
-    // Background color
     this.cameras.main.setBackgroundColor('#0a0a1a');
 
-    // Layers
     this.createTextures();
     this.createBackground();
     this.createPath();
@@ -339,27 +453,21 @@ class GameScene extends Phaser.Scene {
     this.createUI();
 
     this.updateHUD();
-    // Center camera once scale is resolved
-    this.time.delayedCall(100, () => {
-      this.cameras.main.centerOn(MAP_W/2, MAP_H/2);
-    });
+    this.time.delayedCall(100, () => { this.cameras.main.centerOn(MAP_W/2, MAP_H/2); });
   }
 
-  // ---------- PROCEDURAL TEXTURES (ENHANCED) ----------
+  // ---------- PROCEDURAL TEXTURES ----------
   createTextures() {
     const g = this.make.graphics({x:0,y:0,add:false});
 
-    // ---- Tower textures (enhanced with glow) ----
     // Archer
     g.clear();
     g.fillStyle(0x1a3322); g.fillRoundedRect(2,2,36,36,6);
     g.lineStyle(2, 0x44ff88); g.strokeRoundedRect(2,2,36,36,6);
     g.fillStyle(0x44ff88); g.fillCircle(20,20,6);
     g.fillStyle(0x1a3322); g.fillCircle(20,20,3);
-    // barrel
     g.fillStyle(0x44ff88); g.fillRect(18,2,4,14);
-    // glow
-    g.fillStyle(0x44ff88, 0.15); g.fillCircle(20,20,22);
+    g.fillStyle(0x44ff88, 0.18); g.fillCircle(20,20,22);
     g.generateTexture('t_archer',40,40); g.destroy();
 
     // Cannon
@@ -369,18 +477,16 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xff6644); g.fillCircle(21,21,9);
     g.fillStyle(0x331111); g.fillCircle(21,21,5);
     g.fillStyle(0xff6644); g.fillCircle(21,21,2);
-    g.fillStyle(0xff6644, 0.12); g.fillCircle(21,21,24);
+    g.fillStyle(0xff6644, 0.16); g.fillCircle(21,21,24);
     g.generateTexture('t_cannon',42,42); g.destroy();
 
     // Ice
     g.clear();
     g.fillStyle(0x1a2233); g.fillRoundedRect(2,2,36,36,6);
     g.lineStyle(2, 0x44ddff); g.strokeRoundedRect(2,2,36,36,6);
-    g.fillStyle(0x44ddff);
-    g.fillRect(16,4,8,32); g.fillRect(4,16,32,8);
-    g.fillStyle(0xffffff, 0.3);
-    g.fillRect(18,8,4,4); g.fillRect(8,18,4,4);
-    g.fillStyle(0x44ddff, 0.12); g.fillCircle(20,20,22);
+    g.fillStyle(0x44ddff); g.fillRect(16,4,8,32); g.fillRect(4,16,32,8);
+    g.fillStyle(0xffffff, 0.3); g.fillRect(18,8,4,4); g.fillRect(8,18,4,4);
+    g.fillStyle(0x44ddff, 0.16); g.fillCircle(20,20,22);
     g.generateTexture('t_ice',40,40); g.destroy();
 
     // Lightning
@@ -391,7 +497,7 @@ class GameScene extends Phaser.Scene {
     g.lineStyle(2, 0xffdd44);
     g.lineBetween(20,12,14,18); g.lineBetween(20,12,26,18);
     g.lineBetween(20,28,14,22); g.lineBetween(20,28,26,22);
-    g.fillStyle(0xffdd44, 0.12); g.fillCircle(20,20,22);
+    g.fillStyle(0xffdd44, 0.16); g.fillCircle(20,20,22);
     g.generateTexture('t_lightning',40,40); g.destroy();
 
     // Sniper
@@ -401,57 +507,88 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xff44aa); g.fillCircle(20,20,7);
     g.fillStyle(0x220022); g.fillCircle(20,20,3);
     g.lineStyle(3, 0xff44aa); g.lineBetween(20,20,20,2);
-    g.fillStyle(0xff44aa, 0.12); g.fillCircle(20,20,22);
+    g.fillStyle(0xff44aa, 0.16); g.fillCircle(20,20,22);
     g.generateTexture('t_sniper',40,40); g.destroy();
 
-    // ---- Enemy textures ----
-    // Normal — red glowing orb with eyes
+    // Laser
     g.clear();
-    const grad = g.createGradientStyle(0xff5577,1,0xff3366,0,12,12,'radial');
-    g.fillStyle(grad); g.fillCircle(12,12,11);
+    g.fillStyle(0x1a3333); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0x66ffff); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0x66ffff); g.fillCircle(20,20,6);
+    g.fillStyle(0xffffff); g.fillCircle(20,20,3);
+    g.fillStyle(0x66ffff); g.fillRect(18,4,4,12);
+    g.fillStyle(0x66ffff, 0.18); g.fillCircle(20,20,22);
+    g.generateTexture('t_laser',40,40); g.destroy();
+
+    // Rocket
+    g.clear();
+    g.fillStyle(0x332211); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0xffaa44); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0xffaa44); g.fillTriangle(20,4, 12,16, 28,16);
+    g.fillStyle(0xff6644); g.fillRect(14,16,12,16);
+    g.fillStyle(0xffdd88); g.fillCircle(20,22,3);
+    g.fillStyle(0xffaa44, 0.18); g.fillCircle(20,20,22);
+    g.generateTexture('t_rocket',40,40); g.destroy();
+
+    // Enemy: Normal
+    g.clear();
+    g.fillStyle(0xff5577,1); g.fillCircle(12,12,11);
+    g.fillStyle(0xff3366,0.6); g.fillCircle(12,12,8);
     g.fillStyle(0xffffff); g.fillCircle(8,9,3); g.fillCircle(16,9,3);
     g.fillStyle(0x330011); g.fillCircle(8,9,1.5); g.fillCircle(16,9,1.5);
     g.generateTexture('e_normal',24,24); g.destroy();
 
-    // Fast — orange dart
+    // Enemy: Fast
     g.clear();
-    const g2 = g.createGradientStyle(0xffcc44,1,0xff8800,0,12,12,'radial');
-    g.fillStyle(g2);
-    g.fillTriangle(12,2,2,22,22,22);
+    g.fillStyle(0xffcc44,1); g.fillTriangle(12,2,2,22,22,22);
+    g.fillStyle(0xff8800,0.7); g.fillTriangle(12,6,6,20,18,20);
     g.fillStyle(0xffffff, 0.4); g.fillCircle(14,10,3);
     g.generateTexture('e_fast',24,24); g.destroy();
 
-    // Tank — purple armored
+    // Enemy: Tank
     g.clear();
-    const gr3 = g.createGradientStyle(0xaa66ff,1,0x6633cc,0,16,16,'radial');
-    g.fillStyle(gr3); g.fillCircle(16,16,14);
+    g.fillStyle(0xaa66ff,1); g.fillCircle(16,16,14);
+    g.fillStyle(0x6633cc,0.7); g.fillCircle(16,16,10);
     g.lineStyle(2, 0x8844ff); g.strokeCircle(16,16,14);
-    g.fillStyle(0xffaa); g.fillCircle(12,12,4);
+    g.fillStyle(0xffffff); g.fillCircle(12,12,4);
     g.fillStyle(0x8844ff); g.fillCircle(20,12,4);
     g.fillStyle(0x4422aa); g.fillRect(8,22,16,4);
     g.generateTexture('e_tank',32,32); g.destroy();
 
-    // Healer — green cross
+    // Enemy: Healer
     g.clear();
-    const gr4 = g.createGradientStyle(0x66ffcc,1,0x33ddaa,0,13,13,'radial');
-    g.fillStyle(gr4); g.fillCircle(13,13,11);
+    g.fillStyle(0x66ffcc,1); g.fillCircle(13,13,11);
+    g.fillStyle(0x33ddaa,0.7); g.fillCircle(13,13,8);
     g.fillStyle(0xffffff); g.fillRect(9,3,8,4); g.fillRect(3,9,4,8);
     g.generateTexture('e_healer',26,26); g.destroy();
 
-    // Boss — big menacing red
+    // Enemy: Boss
     g.clear();
-    const gr5 = g.createGradientStyle(0xff4444,1,0xaa1111,0,22,22,'radial');
-    g.fillStyle(gr5); g.fillCircle(22,22,18);
+    g.fillStyle(0xff4444,1); g.fillCircle(22,22,18);
+    g.fillStyle(0xaa1111,0.7); g.fillCircle(22,22,14);
     g.lineStyle(3, 0xff6666); g.strokeCircle(22,22,18);
     g.fillStyle(0xffffff); g.fillCircle(14,15,5); g.fillCircle(30,15,5);
     g.fillStyle(0x330000); g.fillCircle(14,15,2.5); g.fillCircle(30,15,2.5);
     g.fillStyle(0x880000); g.fillRect(12,32,20,5);
-    // horns
     g.fillStyle(0xcc2222); g.fillTriangle(8,12,4,4,14,8);
     g.fillTriangle(36,12,40,4,30,8);
     g.generateTexture('e_boss',44,44); g.destroy();
 
-    // ---- Projectiles ----
+    // Enemy: Phase
+    g.clear();
+    g.fillStyle(0xaa66ff,0.85); g.fillCircle(12,12,10);
+    g.fillStyle(0xddaaff,0.5); g.fillCircle(12,12,7);
+    g.fillStyle(0xffffff,0.9); g.fillCircle(8,10,2); g.fillCircle(16,10,2);
+    g.fillStyle(0x4422aa); g.fillCircle(12,14,2);
+    g.generateTexture('e_phase',24,24); g.destroy();
+
+    // Enemy: Swarmer
+    g.clear();
+    g.fillStyle(0xffff44,1); g.fillCircle(6,6,5);
+    g.fillStyle(0xffffaa,0.6); g.fillCircle(6,6,7);
+    g.generateTexture('e_swarmer',14,14); g.destroy();
+
+    // Projectiles
     g.clear();
     g.fillStyle(0x44ff88,1); g.fillCircle(4,4,4);
     g.fillStyle(0xaaffcc,0.5); g.fillCircle(4,4,6);
@@ -476,26 +613,31 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xff88cc,0.5); g.fillRect(0,2,6,8);
     g.generateTexture('p_sniper',6,12); g.destroy();
 
-    // ---- Environment ----
-    // Grid cell
+    g.clear();
+    g.fillStyle(0xffaa44,1); g.fillTriangle(5,0, 0,12, 10,12);
+    g.fillStyle(0xff6644,1); g.fillRect(3,8,4,4);
+    g.generateTexture('p_rocket',10,14); g.destroy();
+
+    g.clear();
+    g.fillStyle(0x66ffff,1); g.fillCircle(3,3,3);
+    g.generateTexture('p_laser',6,6); g.destroy();
+
+    // Environment
     g.clear();
     g.fillStyle(0x111128); g.fillRect(0,0,CELL,CELL);
     g.lineStyle(1, 0x222255, 0.4); g.strokeRect(0.5,0.5,CELL-1,CELL-1);
     g.generateTexture('cell', CELL, CELL); g.destroy();
 
-    // Path cell
     g.clear();
     g.fillStyle(0x1a1a35); g.fillRect(0,0,CELL,CELL);
     g.lineStyle(1, 0x333366, 0.3); g.strokeRect(0.5,0.5,CELL-1,CELL-1);
     g.generateTexture('cell_path', CELL, CELL); g.destroy();
 
-    // Range circle
     g.clear();
     g.fillStyle(0xffffff, 0.06); g.fillCircle(200,200,200);
     g.lineStyle(1, 0xffffff, 0.15); g.strokeCircle(200,200,200);
     g.generateTexture('range', 400, 400); g.destroy();
 
-    // Core
     g.clear();
     g.fillStyle(0x4488ff); g.fillCircle(24,24,20);
     g.fillStyle(0x88bbff); g.fillCircle(24,24,12);
@@ -503,17 +645,26 @@ class GameScene extends Phaser.Scene {
     g.lineStyle(3, 0x66aaff); g.strokeCircle(24,24,20);
     g.generateTexture('core', 48, 48); g.destroy();
 
-    // Spawn
     g.clear();
     g.fillStyle(0xff3344, 0.7); g.fillCircle(16,16,14);
     g.lineStyle(2, 0xff6677); g.strokeCircle(16,16,14);
     g.fillStyle(0xffffff); g.fillCircle(16,16,4);
     g.generateTexture('spawn', 32, 32); g.destroy();
 
-    // Spark
     g.clear();
     g.fillStyle(0xffffff,1); g.fillCircle(3,3,3);
     g.generateTexture('spark', 6, 6); g.destroy();
+
+    // Ring (for AOE explosion)
+    g.clear();
+    g.lineStyle(3, 0xffffff, 1); g.strokeCircle(40,40,38);
+    g.generateTexture('ring', 80, 80); g.destroy();
+
+    // Power-up icon backdrops (using sparks tinted)
+    g.clear();
+    g.fillStyle(0xffffff, 1); g.fillCircle(10,10,9);
+    g.fillStyle(0xffffff, 0.4); g.fillCircle(10,10,12);
+    g.generateTexture('pu_blob', 22, 22); g.destroy();
   }
 
   // ---------- BACKGROUND ----------
@@ -521,8 +672,6 @@ class GameScene extends Phaser.Scene {
     this.bgGraphics = this.add.graphics().setDepth(0);
     this.bgGraphics.fillStyle(0x0d0d1a);
     this.bgGraphics.fillRect(0,0,MAP_W,MAP_H);
-
-    // Starfield
     for (let i = 0; i < 80; i++) {
       const sx = Math.random()*MAP_W, sy = Math.random()*MAP_H;
       const ss = Math.random()*2+0.5;
@@ -533,49 +682,34 @@ class GameScene extends Phaser.Scene {
     this.bgGraphics.strokeRect(1,1,MAP_W-2,MAP_H-2);
   }
 
-  // ---------- PATH ----------
   createPath() {
     this.pathGfx = this.add.graphics().setDepth(1);
-
-    // Path glow
     this.pathGfx.lineStyle(CELL*0.65, 0x1a1a44, 0.4);
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
-
-    // Main path line
     this.pathGfx.lineStyle(CELL*0.5, 0x252548, 0.6);
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
-
-    // Dashed center
     this.pathGfx.lineStyle(2, 0x444488, 0.25);
     this.pathGfx.setLineDash([6,6]);
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
     this.pathGfx.setLineDash([]);
 
-    // Spawn marker
     const sp = this.add.image(PATH[0].x, PATH[0].y, 'spawn').setDepth(1);
     this.add.text(PATH[0].x, PATH[0].y+22, 'SPAWN', {fontSize:'9px',color:'#ff4466',fontFamily:'Segoe UI,system-ui,sans-serif'})
       .setOrigin(0.5).setDepth(1).setAlpha(0.5);
   }
 
-  // ---------- CORE ----------
   createCore() {
     const end = PATH[PATH.length-1];
     this.coreX = end.x; this.coreY = end.y;
-
     this.coreSprite = this.add.image(this.coreX, this.coreY, 'core').setDepth(5).setScale(0.85);
-
     this.add.text(this.coreX, this.coreY+26, 'CORE', {fontSize:'9px',color:'#4488ff',fontFamily:'Segoe UI,system-ui,sans-serif'})
       .setOrigin(0.5).setDepth(5).setAlpha(0.5);
-
-    // Core HP bar
     this.coreBarBg = this.add.graphics().setDepth(6);
     this.coreBarFill = this.add.graphics().setDepth(7);
     this.redrawCoreBar();
-
-    // Pulse
     this.tweens.add({targets:this.coreSprite,alpha:0.65,duration:1400,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
   }
 
@@ -590,7 +724,6 @@ class GameScene extends Phaser.Scene {
     this.coreBarFill.fillRect(bx,by,bw*ratio,bh);
   }
 
-  // ---------- GRID ----------
   createGrid() {
     this.grid = [];
     for (let row = 0; row < ROWS; row++) {
@@ -600,14 +733,12 @@ class GameScene extends Phaser.Scene {
         const cell = this.add.image(col*CELL+CELL/2, row*CELL+CELL/2, isP?'cell_path':'cell').setDepth(2);
         cell.setInteractive({useHandCursor:true});
         cell._col = col; cell._row = row; cell._isPath = isP; cell._tower = null;
-
         cell.on('pointerdown', (ptr) => this._onCellDown(ptr, cell));
         this.grid[row][col] = cell;
       }
     }
   }
 
-  // ---------- UI ----------
   createUI() {
     const panel = document.getElementById('towerPanel');
     panel.innerHTML = '';
@@ -619,36 +750,26 @@ class GameScene extends Phaser.Scene {
       b.addEventListener('touchend', e => { e.preventDefault(); this._selectType(k); });
       panel.appendChild(b);
     });
-
-    document.getElementById('startWave').addEventListener('click', () => this._startWave());
-    document.getElementById('startWave').addEventListener('touchend', e => { e.preventDefault(); this._startWave(); });
-    document.getElementById('sellTower').addEventListener('click', () => this._sellSelected());
-    document.getElementById('sellTower').addEventListener('touchend', e => { e.preventDefault(); this._sellSelected(); });
-    document.getElementById('startBtn').addEventListener('click', () => this._begin());
-    document.getElementById('restartBtn').addEventListener('click', () => location.reload());
-    document.getElementById('restartBtn2').addEventListener('click', () => location.reload());
-  }
-
-  // ---------- INPUT (FIXED — no canvas pointer conflict) ----------
-  setupInput() {
-    // Grid-level pointer events handle everything.
-    // Canvas-level pointer events are removed to avoid conflicts.
   }
 
   _onCellDown(pointer, cell) {
     if (!this.gameStarted || this.gameOver) return;
+
+    // Meteor mode: tap a cell to deploy
+    if (this.meteorMode) {
+      this._fireMeteor(cell._col, cell._row);
+      return;
+    }
 
     const now = Date.now();
     const dt = now - this.doubleTapTime;
     this.doubleTapTime = now;
 
     if (dt < 350 && cell === this.doubleTapCell) {
-      // Double-tap: upgrade
       if (cell._tower) this._upgradeTower(cell._tower);
       this.doubleTapCell = null;
       return;
     }
-
     this.doubleTapCell = cell;
     this.doubleTapTime = now;
 
@@ -689,13 +810,14 @@ class GameScene extends Phaser.Scene {
       lastFire:0, target:null,
       slowF:def.slowF||0, slowD:def.slowD||0,
       aoeR:def.aoeR||0, chainN:def.chainN||0, chainR:def.chainR||0,
+      beamW:def.beamW||0,
+      type:def.type,
       pTex:`p_${type}`,
       body:this.add.image(x,y,`t_${type}`).setDepth(3),
       turret:this.add.image(x,y,`t_${type}`).setDepth(3).setAlpha(0.7),
       rangeSprite:null,
+      beam:null, beamTime:0,
     };
-
-    // Tower turret follows body but rotates toward targets
     this.towers.push(tower);
     cell._tower = tower;
 
@@ -717,9 +839,10 @@ class GameScene extends Phaser.Scene {
     const d = TOWER_DEFS[t.key];
     t.damage = Math.floor(d.dmg * (1+(t.level-1)*0.45));
     t.range = Math.floor(d.range * (1+(t.level-1)*0.12));
-    t.fireRate = Math.max(200, Math.floor(d.fireRate * (1-(t.level-1)*0.12)));
+    t.fireRate = Math.max(50, Math.floor(d.fireRate * (1-(t.level-1)*0.12)));
     if (t.chainN) t.chainN += (t.level >= 3) ? 1 : 0;
     if (t.aoeR) t.aoeR = Math.floor(d.aoeR * (1+(t.level-1)*0.18));
+    if (t.beamW) t.beamW = d.beamW + (t.level-1);
 
     this._particles(t.x, t.y, 0xffdd00, 14, 80);
     this._floatText(t.x, t.y-25, `LV${t.level}`, '#ffdd00');
@@ -727,15 +850,13 @@ class GameScene extends Phaser.Scene {
     if (this.selectedTower === t) this._showTooltip(t, {x:t.x, y:t.y});
   }
 
-  _sellSelected() {
-    if (this.selectedTower) this._sellTower(this.selectedTower);
-  }
-
+  _sellSelected() { if (this.selectedTower) this._sellTower(this.selectedTower); }
   _sellTower(t) {
     this.gold += Math.floor(t.totalSpent*0.6);
     if (t.body) t.body.destroy();
     if (t.turret) t.turret.destroy();
     if (t.rangeSprite) t.rangeSprite.destroy();
+    if (t.beam) { t.beam.destroy(); t.beam = null; }
     if (this.grid[t.row]) this.grid[t.row][t.col]._tower = null;
     this.towers = this.towers.filter(x=>x!==t);
     this.selectedTower = null;
@@ -743,7 +864,6 @@ class GameScene extends Phaser.Scene {
     this._updateHUD(); this._updateBtnStates();
   }
 
-  // ---------- TOOLTIP ----------
   _showTooltip(t, ptr) {
     const def = TOWER_DEFS[t.key];
     const tt = document.getElementById('tooltip');
@@ -758,19 +878,18 @@ class GameScene extends Phaser.Scene {
     document.getElementById('ttTotal').textContent = t.totalSpent;
     const act = tt.querySelector('.tt-action');
     act.textContent = t.level < 5 ? `Double-tap to upgrade 💰${upCost}` : `Max Lv · Press ✖ to sell 💰${sellVal}`;
-
-    const wx = this.cameras.main.worldToPointer(ptr).x;
-    const wy = this.cameras.main.worldToPointer(ptr).y;
+    const wx = this.cameras.main.worldToPointer ? this.cameras.main.worldToPointer(ptr).x : (ptr.x||0);
+    const wy = this.cameras.main.worldToPointer ? this.cameras.main.worldToPointer(ptr).y : (ptr.y||0);
     tt.style.display = 'block';
     tt.style.left = Math.min(wx+8, window.innerWidth-150)+'px';
     tt.style.top = Math.min(wy-5, window.innerHeight-150)+'px';
   }
   _hideTooltip() { document.getElementById('tooltip').style.display='none'; }
 
-  // ---------- RANGE INDICATOR ----------
   _showRange(t) {
     this._clearRange();
-    t.rangeSprite = this.add.image(t.x, t.y, 'range').setDepth(2).setTint(t.key==='archer'?0x44ff88:t.key==='cannon'?0xff6644:t.key==='ice'?0x44ddff:t.key==='lightning'?0xffdd44:0xff44aa);
+    const def = TOWER_DEFS[t.key];
+    t.rangeSprite = this.add.image(t.x, t.y, 'range').setDepth(2).setTint(def.color);
     t.rangeSprite.setScale(t.range/200).setAlpha(0.5);
   }
   _clearRange() { this.towers.forEach(t=>{if(t.rangeSprite){t.rangeSprite.destroy();t.rangeSprite=null;}}); }
@@ -780,6 +899,8 @@ class GameScene extends Phaser.Scene {
     if (this.waveActive || this.gameOver || this.wave >= TOTAL_WAVES) return;
     this.wave++;
     this.waveActive = true;
+    this.autoStartTimer = 0;
+    document.getElementById('countdown').style.display = 'none';
 
     const types = getWaveEnemies(this.wave);
     this.spawnQueue = [];
@@ -788,13 +909,16 @@ class GameScene extends Phaser.Scene {
 
     const delay = this.wave > 18 ? 300 : this.wave > 10 ? 400 : 550;
     this.spawnQueue.forEach((ed, i) => {
-      this.time.delayedCall(i * delay, () => {
+      this.time.delayedCall(i * delay / this.gameSpeed, () => {
         if (!this.gameOver) this._spawnEnemy(ed.type, ed.hp);
       });
     });
 
+    if (this.wave === 1) this.goldStartTime = this.time.now;
+    SFX.waveStart();
     this._floatText(MAP_W/2, MAP_H/2, `WAVE ${this.wave}`, '#88ddff');
     this._updateHUD();
+    this._updateWavePreview();
     document.getElementById('startWave').style.display = 'none';
   }
 
@@ -803,7 +927,6 @@ class GameScene extends Phaser.Scene {
     const sp = this.add.image(PATH[0].x, PATH[0].y, `e_${type}`).setDepth(4);
     sp.setScale(def.r / 12);
 
-    // HP bar
     const hbBg = this.add.graphics().setDepth(5);
     const hbFill = this.add.graphics().setDepth(6);
 
@@ -813,37 +936,68 @@ class GameScene extends Phaser.Scene {
       radius:def.r, slowTimer:0, slowFactor:1,
       heals:def.heals||false, healTimer:0, alive:true,
       hbBg, hbFill,
+      // Phase
+      phased:false, phaseTimer:0, phaseCheck:0,
+      // Boss
+      isBoss:(type==='boss'), bossBurstTimer:0, bossSpawnTimer:0,
     };
     enemy._updateHpBar = () => {
       const bx = enemy.x-12, by = enemy.y-enemy.radius-8, bw = 24, bh = 3;
-      enemy.hbBg.clear();
-      enemy.hbFill.clear();
-      enemy.hbBg.fillStyle(0x000,0.6);
-      enemy.hbBg.fillRect(bx,by,bw,bh);
+      enemy.hbBg.clear(); enemy.hbFill.clear();
+      enemy.hbBg.fillStyle(0x000,0.6); enemy.hbBg.fillRect(bx,by,bw,bh);
       const ratio = Math.max(0, enemy.hp/enemy.maxHp);
       enemy.hbFill.fillStyle(ratio>0.5?0x44ff88:ratio>0.25?0xffaa22:0xff4444);
       enemy.hbFill.fillRect(bx,by,bw*ratio,bh);
     };
     enemy._updateHpBar();
-
     this.enemies.push(enemy);
+
+    if (enemy.isBoss) {
+      this.bossList.push(enemy);
+      this.cameras.main.shake(400, 0.008);
+      this._floatText(enemy.x, enemy.y-30, '⚠ BOSS ⚠', '#ff2222');
+    }
   }
 
   // ---------- ENEMIES ----------
   _updateEnemies() {
+    const dt = this.game.loop.actualDelta * this.gameSpeed;
     for (let i = this.enemies.length-1; i >= 0; i--) {
       const e = this.enemies[i];
       if (!e.alive) continue;
 
       // Slow
       if (e.slowTimer > 0) {
-        e.slowTimer -= this.game.loop.actualDelta;
+        e.slowTimer -= dt;
         if (e.slowTimer <= 0) e.slowFactor = 1;
+      }
+
+      // Phase enemy logic
+      if (e.type === 'phase') {
+        if (e.phased) {
+          e.phaseTimer -= dt;
+          e.sp.setAlpha(0.3 + Math.sin(this.time.now*0.02)*0.2);
+          if (e.phaseTimer <= 0) { e.phased = false; e.sp.setAlpha(1); }
+        } else {
+          e.phaseCheck += dt;
+          if (e.phaseCheck >= 800) {
+            e.phaseCheck = 0;
+            if (Math.random() < 0.2) {
+              e.phased = true; e.phaseTimer = 1500;
+              this._particles(e.x, e.y, 0xaa66ff, 8, 40);
+            }
+          }
+        }
+      }
+
+      // Swarmer trail
+      if (e.type === 'swarmer' && Math.random() < 0.3) {
+        this._particles(e.x, e.y, 0xffff44, 1, 15);
       }
 
       // Healer
       if (e.heals) {
-        e.healTimer += this.game.loop.actualDelta;
+        e.healTimer += dt;
         if (e.healTimer >= 2000) {
           e.healTimer = 0;
           this.enemies.forEach(o => {
@@ -858,8 +1012,24 @@ class GameScene extends Phaser.Scene {
         }
       }
 
+      // Boss abilities
+      if (e.isBoss) {
+        e.bossBurstTimer += dt;
+        if (e.bossBurstTimer >= 8000) {
+          e.bossBurstTimer = 0;
+          this._bossAOEBurst(e);
+        }
+        if (e.hp < e.maxHp * 0.5) {
+          e.bossSpawnTimer += dt;
+          if (e.bossSpawnTimer >= 5000) {
+            e.bossSpawnTimer = 0;
+            this._bossSpawnMinions(e);
+          }
+        }
+      }
+
       // Move
-      const move = e.speed * e.slowFactor * (this.game.loop.actualDelta/1000);
+      const move = e.speed * e.slowFactor * (dt/1000);
       e.distance += move;
       const pos = posOnPath(e.distance);
       e.x = pos.x; e.y = pos.y;
@@ -870,12 +1040,23 @@ class GameScene extends Phaser.Scene {
       if (e.distance >= PATH_LEN) {
         e.alive = false;
         e.sp.destroy();
+        e.hbBg.destroy(); e.hbFill.destroy();
         this.enemies.splice(i,1);
-        this.lives--;
+        this.enemiesRemaining--;
+        // Shield absorbs
+        let damage = 1;
+        if (this.shieldBuffer > 0) {
+          this.shieldBuffer--;
+          this._floatText(this.coreX, this.coreY-30, 'SHIELD!', '#44ddff');
+          damage = 0;
+        }
+        this.lives -= damage;
         this.redrawCoreBar();
         this._updateHUD();
-        this.cameras.main.flash(200, 255, 0, 0, true);
+        if (damage>0) this.cameras.main.flash(200, 255, 0, 0, true);
         if (this.lives <= 0) { this._gameOver(); return; }
+        this._checkWaveClear();
+        continue;
       }
 
       // Dead
@@ -883,45 +1064,124 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  _bossAOEBurst(boss) {
+    SFX.explosion();
+    this.cameras.main.shake(200, 0.005);
+    const ring = this.add.image(boss.x, boss.y, 'ring').setDepth(6).setTint(0xff2222).setScale(0.2);
+    this.tweens.add({targets:ring, scale:2.5, alpha:0, duration:600, ease:'Power2', onComplete:()=>ring.destroy()});
+    this.enemies.forEach(e => {
+      if (!e.alive || e === boss) return;
+      if (Phaser.Math.Distance.Between(boss.x,boss.y,e.x,e.y) <= 100) {
+        this._hit(e, 30, 'shield');
+      }
+    });
+  }
+  _bossSpawnMinions(boss) {
+    this._particles(boss.x, boss.y, 0xaa66ff, 20, 100);
+    // Spawn two swarmers at boss's path position (slightly behind)
+    for (let i = 0; i < 2; i++) {
+      const hp = getEnemyHp(this.wave, 'swarmer');
+      const def = ENEMY_DEFS.swarmer;
+      const sp = this.add.image(boss.x, boss.y, 'e_swarmer').setDepth(4);
+      sp.setScale(def.r / 12);
+      const hbBg = this.add.graphics().setDepth(5);
+      const hbFill = this.add.graphics().setDepth(6);
+      const e = {
+        type:'swarmer', sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
+        reward:def.reward, distance:boss.distance-10, x:boss.x, y:boss.y,
+        radius:def.r, slowTimer:0, slowFactor:1, heals:false, healTimer:0, alive:true,
+        hbBg, hbFill, phased:false, phaseTimer:0, phaseCheck:0, isBoss:false
+      };
+      e._updateHpBar = () => {
+        const bx = e.x-12, by = e.y-e.radius-8, bw = 24, bh = 3;
+        e.hbBg.clear(); e.hbFill.clear();
+        e.hbBg.fillStyle(0x000,0.6); e.hbBg.fillRect(bx,by,bw,bh);
+        const ratio = Math.max(0, e.hp/e.maxHp);
+        e.hbFill.fillStyle(ratio>0.5?0x44ff88:ratio>0.25?0xffaa22:0xff4444);
+        e.hbFill.fillRect(bx,by,bw*ratio,bh);
+      };
+      e._updateHpBar();
+      this.enemies.push(e);
+      this.enemiesRemaining++;
+    }
+  }
+
   _killEnemy(e, i) {
     e.alive = false;
-    this.gold += e.reward;
+
+    // Combo
+    const now = this.time.now;
+    if (now - this.lastKillTime < 2000) this.combo++;
+    else this.combo = 1;
+    this.lastKillTime = now;
+
+    // Gold (with combo bonus)
+    const bonus = Math.floor(e.reward * (this.combo * 0.05));
+    const totalGold = e.reward + bonus;
+    this.gold += totalGold;
+    this.goldEarned += totalGold;
     this.enemiesKilled++;
+
+    SFX.death();
+    this.cameras.main.shake(80, 0.003);
     this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, 10, 60);
     this._floatText(e.x, e.y-e.radius-10, `+${e.reward}`, '#ffcc00');
+    if (bonus > 0) this._floatText(e.x+15, e.y-e.radius-15, `+${bonus}`, '#ffdd44');
+
+    // Power-up drop
+    if (Math.random() < 0.08) this._dropPowerUp(e.x, e.y);
+
     e.sp.destroy();
     e.hbBg.destroy(); e.hbFill.destroy();
     this.enemies.splice(i,1);
     this.enemiesRemaining--;
+    if (e.isBoss) this.bossList = this.bossList.filter(b=>b!==e);
     this._updateHUD();
+    this._checkWaveClear();
+  }
 
-    // Wave complete check — FIXED: was `!this.waveActive` (always false when wave active)
+  _checkWaveClear() {
     if (this.enemiesRemaining <= 0 && this.waveActive && !this.gameOver) {
       this.waveActive = false;
-      const bonus = 20 + this.wave * 5;
+      const baseBonus = 20 + this.wave * 5;
+      const comboMult = Math.max(1, this.combo);
+      const bonus = baseBonus * comboMult;
       this.gold += bonus;
+      this.goldEarned += bonus;
+      SFX.waveClear();
       this._floatText(MAP_W/2, MAP_H/2-20, `WAVE ${this.wave} CLEAR! +${bonus}`, '#00ff88');
       this._updateHUD();
       document.getElementById('startWave').style.display = '';
-
       if (this.wave >= TOTAL_WAVES) { this._win(); }
+      else {
+        // Auto-start countdown
+        this.autoStartTimer = 5000;
+        document.getElementById('countdown').style.display = 'block';
+      }
+      this._updateWavePreview();
     }
   }
 
   // ---------- TOWERS ----------
   _updateTowers() {
     const now = this.time.now;
+    const rapidMul = this.activePowers.rapid ? 0.5 : 1;
 
     this.towers.forEach(tower => {
-      if (now < tower.lastFire + tower.fireRate) return;
+      // Beam towers
+      if (tower.type === 'beam') {
+        this._updateBeamTower(tower);
+        return;
+      }
+
+      const effectiveFR = tower.fireRate * rapidMul / this.gameSpeed;
+      if (now < tower.lastFire + effectiveFR) return;
 
       let best = null, bestProg = -1;
       for (const e of this.enemies) {
-        if (!e.alive) continue;
+        if (!e.alive || e.phased) continue;
         const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
-        if (d <= tower.range && e.distance > bestProg) {
-          bestProg = e.distance; best = e;
-        }
+        if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
       }
       if (!best) {
         if (this.selectedTower === tower) this._showRange(tower);
@@ -930,40 +1190,98 @@ class GameScene extends Phaser.Scene {
 
       tower.lastFire = now;
       tower.target = best;
-
-      // Rotate turret toward target
       const angle = Phaser.Math.Angle.Between(tower.x, tower.y, best.x, best.y);
       tower.turret.setRotation(angle + Math.PI/2);
-
       this._fire(tower, best);
+
+      // Nova: spawn extra chain projectile
+      if (this.activePowers.nova) this._chainLightning(best, 2, 100, tower.damage*0.5);
     });
   }
 
+  _updateBeamTower(tower) {
+    let best = null, bestProg = -1;
+    for (const e of this.enemies) {
+      if (!e.alive || e.phased) continue;
+      const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
+      if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
+    }
+    if (!best) {
+      if (tower.beam) { tower.beam.destroy(); tower.beam = null; }
+      return;
+    }
+    tower.target = best;
+    const angle = Phaser.Math.Angle.Between(tower.x, tower.y, best.x, best.y);
+    tower.turret.setRotation(angle + Math.PI/2);
+    // Draw beam
+    if (!tower.beam) tower.beam = this.add.graphics().setDepth(4);
+    tower.beam.clear();
+    const w = tower.beamW || 2;
+    const rapidMul = this.activePowers.rapid ? 1.5 : 1;
+    tower.beam.lineStyle(w+3, 0x66ffff, 0.25);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+    tower.beam.lineStyle(w, 0x66ffff, 0.85);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+    tower.beam.lineStyle(1, 0xffffff, 1);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+
+    // Damage tick (continuous)
+    const dt = this.game.loop.actualDelta * this.gameSpeed;
+    tower.beamTime = (tower.beamTime || 0) + dt;
+    if (tower.beamTime >= 100) {
+      tower.beamTime = 0;
+      const tickDmg = Math.floor(tower.damage * 0.1 * (1 + (tower.beamW-2)*0.3)) * rapidMul;
+      this._hit(best, tickDmg);
+      if (Math.random() < 0.3) SFX.shoot('laser');
+    }
+  }
+
   _fire(tower, target) {
+    SFX.shoot(tower.key);
     const proj = this.add.image(tower.x, tower.y, tower.pTex).setDepth(4);
     this.projectiles.push({
       sp:proj, x:tower.x, y:tower.y, target,
       speed:tower.pSpeed, damage:tower.damage, key:tower.key,
       aoeR:tower.aoeR, slowF:tower.slowF, slowD:tower.slowD,
-      chainN:tower.chainN, chainR:tower.chainR, alive:true
+      chainN:tower.chainN, chainR:tower.chainR, alive:true,
+      homing:(tower.type === 'homing'),
+      type:tower.type,
     });
-    this._particles(tower.x+Math.cos(Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y))*15,
-                     tower.y+Math.sin(Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y))*15,
+    const ang = Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y);
+    this._particles(tower.x+Math.cos(ang)*15, tower.y+Math.sin(ang)*15,
                      TOWER_DEFS[tower.key].color, 3, 20);
   }
 
   // ---------- PROJECTILES ----------
   _updateProjectiles() {
+    const dt = this.game.loop.actualDelta * this.gameSpeed;
     for (let i = this.projectiles.length-1; i >= 0; i--) {
       const p = this.projectiles[i];
       if (!p.alive) { p.sp.destroy(); this.projectiles.splice(i,1); continue; }
 
+      // Homing rocket: target may die — re-acquire
+      if (p.homing && (!p.target || !p.target.alive)) {
+        let nearest = null, bd = Infinity;
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          const d = Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y);
+          if (d < bd) { bd = d; nearest = e; }
+        }
+        p.target = nearest;
+      }
+
       const tx = (p.target && p.target.alive) ? p.target.x : p.x;
       const ty = (p.target && p.target.alive) ? p.target.y : p.y;
       const angle = Phaser.Math.Angle.Between(p.x, p.y, tx, ty);
-      p.x += Math.cos(angle)*p.speed*(this.game.loop.actualDelta/1000);
-      p.y += Math.sin(angle)*p.speed*(this.game.loop.actualDelta/1000);
+      p.sp.setRotation(angle + Math.PI/2);
+      p.x += Math.cos(angle)*p.speed*(dt/1000);
+      p.y += Math.sin(angle)*p.speed*(dt/1000);
       p.sp.setPosition(p.x, p.y);
+
+      // Rocket trail
+      if (p.homing && Math.random() < 0.5) {
+        this._particles(p.x, p.y, 0xffaa44, 1, 10);
+      }
 
       const dx = p.x-tx, dy = p.y-ty, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < 12 && p.target && p.target.alive) {
@@ -973,10 +1291,9 @@ class GameScene extends Phaser.Scene {
           this.enemies.forEach(e => {
             if (!e.alive || e === p.target) return;
             if (Phaser.Math.Distance.Between(p.x,p.y,e.x,e.y) <= p.aoeR)
-              this._hit(e, Math.floor(p.damage*0.4));
+              this._hit(e, Math.floor(p.damage*0.5));
           });
-          this._particles(p.x,p.y,0xff6644,12,70);
-          this._floatText(p.x,p.y-15,'💥','#ff6644');
+          this._aoeExplosion(p.x, p.y, p.aoeR);
         }
         if (p.slowF > 0) {
           p.target.slowFactor = p.slowF;
@@ -992,9 +1309,25 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  _hit(enemy, dmg) {
-    enemy.hp -= dmg;
-    this._floatText(enemy.x, enemy.y-enemy.radius-5, `-${dmg}`, '#ff4466');
+  _aoeExplosion(x, y, r) {
+    this.cameras.main.shake(150, 0.005);
+    SFX.explosion();
+    const ring = this.add.image(x, y, 'ring').setDepth(6).setTint(0xff8844).setScale(0.1);
+    this.tweens.add({targets:ring, scale:r/40, alpha:0, duration:400, ease:'Power2', onComplete:()=>ring.destroy()});
+    this._particles(x,y,0xff6644,16,90);
+  }
+
+  _hit(enemy, dmg, kind) {
+    // Boss weak point: sniper/lightning bonus
+    let finalDmg = dmg;
+    let color = '#ff4466';
+    if (enemy.isBoss && (kind === 'sniper' || kind === 'lightning')) {
+      finalDmg = Math.floor(dmg * 1.4);
+      color = '#ff8844';
+    }
+    if (kind === 'shield') color = '#44ddff';
+    enemy.hp -= finalDmg;
+    this._floatText(enemy.x, enemy.y-enemy.radius-5, `-${finalDmg}`, color, true);
     this._particles(enemy.x, enemy.y, 0xffffff, 4, 25);
   }
 
@@ -1003,14 +1336,14 @@ class GameScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       let best = null, bestD = range;
       this.enemies.forEach(e => {
-        if (!e.alive || chained.includes(e) || e === src) return;
+        if (!e.alive || chained.includes(e) || e === src || e.phased) return;
         const d = Phaser.Math.Distance.Between(last.x,last.y,e.x,e.y);
         if (d < bestD) { bestD = d; best = e; }
       });
       if (!best) break;
       chained.push(best);
       this._drawBolt(last.x,last.y,best.x,best.y,0xffdd44);
-      this._hit(best, Math.floor(dmg*0.55));
+      this._hit(best, Math.floor(dmg*0.55), 'lightning');
       this._particles(best.x,best.y,0xffdd44,4,35);
       last = best;
     }
@@ -1032,6 +1365,145 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({targets:g,alpha:0,duration:250,onComplete:()=>g.destroy()});
   }
 
+  // ---------- POWER-UPS ----------
+  _dropPowerUp(x, y) {
+    const key = POWERUP_KEYS[Math.floor(Math.random()*POWERUP_KEYS.length)];
+    const def = POWERUPS[key];
+    const txt = this.add.text(x, y, def.icon, {fontSize:'22px'}).setOrigin(0.5).setDepth(20);
+    const pu = { key, sp:txt, x, y, vy:-1, alive:true, collected:false, t:0 };
+    this.powerUps.push(pu);
+  }
+
+  _updatePowerUps() {
+    const dt = this.game.loop.actualDelta;
+    // Target = top-center of screen (gold area). We'll convert screen coord to world.
+    const goldEl = document.getElementById('gold');
+    const rect = goldEl.getBoundingClientRect();
+    const cam = this.cameras.main;
+    const sx = rect.left + rect.width/2;
+    const sy = rect.top + rect.height/2;
+    // Convert screen to world
+    const worldPt = cam.getWorldPoint(sx, sy);
+    for (let i = this.powerUps.length-1; i >= 0; i--) {
+      const pu = this.powerUps[i];
+      if (!pu.alive) { pu.sp.destroy(); this.powerUps.splice(i,1); continue; }
+      pu.t += dt;
+      // Fly to gold area
+      const dx = worldPt.x - pu.x, dy = worldPt.y - pu.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const spd = 220 * (dt/1000);
+      if (dist < spd) {
+        // Arrived - add to inventory
+        this.inventory.push(pu.key);
+        pu.alive = false;
+        SFX.powerUp();
+        this._renderInventory();
+        document.getElementById('gold').classList.add('has-powerups');
+        continue;
+      }
+      pu.x += (dx/dist)*spd;
+      pu.y += (dy/dist)*spd;
+      pu.sp.setPosition(pu.x, pu.y);
+      // pulse
+      const sc = 1 + Math.sin(pu.t*0.008)*0.15;
+      pu.sp.setScale(sc);
+    }
+  }
+
+  _renderInventory() {
+    const bar = document.getElementById('powerUpBar');
+    bar.innerHTML = '';
+    this.inventory.forEach((k, idx) => {
+      const def = POWERUPS[k];
+      const el = document.createElement('div');
+      el.className = 'pu-icon ' + def.cls;
+      el.textContent = def.icon;
+      el.title = def.name;
+      el.addEventListener('click', e => { e.stopPropagation(); this._activatePower(idx); });
+      el.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); this._activatePower(idx); });
+      bar.appendChild(el);
+    });
+    if (this.inventory.length === 0) {
+      document.getElementById('gold').classList.remove('has-powerups');
+    }
+  }
+
+  _collectPowerUps() {
+    // Tapping gold — instantly attract all floating power-ups
+    this.powerUps.forEach(pu => {
+      this.inventory.push(pu.key);
+      pu.sp.destroy(); pu.alive = false;
+    });
+    this.powerUps = [];
+    if (this.inventory.length > 0) {
+      SFX.powerUp();
+      this._renderInventory();
+    }
+    // Also if any "use-on-tap" type and only meteor is in inventory, prompt activation
+    // (We already use icons for that.)
+  }
+
+  _activatePower(idx) {
+    const key = this.inventory[idx];
+    if (!key) return;
+    const def = POWERUPS[key];
+    this.inventory.splice(idx, 1);
+    SFX.powerUp();
+
+    switch (key) {
+      case 'rapid':
+        this.activePowers.rapid = this.time.now + def.dur;
+        this._floatText(MAP_W/2, MAP_H/2, '🔥 RAPID FIRE!', '#ff6644');
+        break;
+      case 'shield':
+        this.activePowers.shield = this.time.now + def.dur;
+        this.shieldBuffer = 3;
+        this._floatText(MAP_W/2, MAP_H/2, '🛡️ SHIELD!', '#44ddff');
+        break;
+      case 'nova':
+        this.activePowers.nova = this.time.now + def.dur;
+        this._floatText(MAP_W/2, MAP_H/2, '⚡ CHAIN NOVA!', '#ffdd44');
+        break;
+      case 'meteor':
+        this.meteorMode = true;
+        const mi = document.getElementById('modeIndicator');
+        mi.style.display = 'block';
+        mi.textContent = '☄️ Tap a cell to strike';
+        this._floatText(MAP_W/2, MAP_H/2, '☄️ SELECT TARGET', '#ff8844');
+        // Note: meteor was consumed from inventory; if user cancels we re-add
+        this._meteorReadd = key;
+        break;
+      case 'decay':
+        this.enemies.forEach(e => {
+          if (!e.alive) return;
+          const dmg = Math.floor(e.maxHp * 0.2);
+          this._hit(e, dmg);
+        });
+        this._floatText(MAP_W/2, MAP_H/2, '💀 DECAY!', '#aa66ff');
+        break;
+    }
+    this._renderInventory();
+  }
+
+  _fireMeteor(col, row) {
+    this.meteorMode = false;
+    this._meteorReadd = null;
+    document.getElementById('modeIndicator').style.display = 'none';
+    const x = col*CELL+CELL/2, y = row*CELL+CELL/2;
+    // Big explosion
+    this.cameras.main.shake(400, 0.01);
+    SFX.explosion();
+    const ring = this.add.image(x, y, 'ring').setDepth(7).setTint(0xff8844).setScale(0.1);
+    this.tweens.add({targets:ring, scale:5, alpha:0, duration:700, ease:'Power2', onComplete:()=>ring.destroy()});
+    const radius = CELL * 3;
+    this.enemies.forEach(e => {
+      if (!e.alive) return;
+      if (Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) this._hit(e, 100);
+    });
+    this._particles(x, y, 0xff8844, 30, 150);
+    this._floatText(x, y-30, '☄️ METEOR!', '#ff8844');
+  }
+
   // ---------- EFFECTS ----------
   _particles(x, y, col, count, speed) {
     for (let i = 0; i < count; i++) {
@@ -1043,20 +1515,27 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  _floatText(x, y, text, color) {
-    const t = this.add.text(x,y,text,{fontSize:'13px',fontFamily:'Segoe UI,system-ui,sans-serif',
-      color:color,fontStyle:'bold'}).setOrigin(0.5).setDepth(8);
-    this.tweens.add({targets:t, y:y-35, alpha:0, duration:700, ease:'Power2', onComplete:()=>t.destroy()});
+  _floatText(x, y, text, color, isDmg=false) {
+    const c = typeof color === 'number' ? '#'+color.toString(16).padStart(6,'0') : color;
+    const t = this.add.text(x,y,text,{fontSize: isDmg?'12px':'13px',
+      fontFamily:'Segoe UI,system-ui,sans-serif',
+      color:c, fontStyle:'bold', stroke:'#000', strokeThickness:2
+    }).setOrigin(0.5).setDepth(8).setScale(0.5);
+    this.tweens.add({targets:t, scale:1.2, duration:120, ease:'Back.out',
+      onComplete: () => {
+        this.tweens.add({targets:t, y:y-40, alpha:0, scale:1, duration:600, ease:'Cubic.out', onComplete:()=>t.destroy()});
+      }
+    });
   }
 
   // ---------- GAME STATE ----------
   _begin() {
+    SFX.init();
     document.getElementById('startScreen').style.display = 'none';
     this.gameStarted = true;
-    if (this._canvas) {
-      this._canvas.style.display = 'block';
-      this._canvas.style.pointerEvents = 'auto';
-    }
+    this.goldStartTime = this.time.now;
+    if (this._canvas) { this._canvas.style.visibility = 'visible'; this._canvas.style.pointerEvents = 'auto'; }
+    this._updateWavePreview();
   }
   _gameOver() {
     this.gameOver = true;
@@ -1064,10 +1543,7 @@ class GameScene extends Phaser.Scene {
     document.getElementById('finalTowers').textContent = this.towersBuilt;
     document.getElementById('finalKills').textContent = this.enemiesKilled;
     document.getElementById('gameOverScreen').style.display = 'flex';
-    if (this._canvas) {
-      this._canvas.style.display = 'none';
-      this._canvas.style.pointerEvents = 'none';
-    }
+    if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
   }
   _win() {
     this.gameOver = true;
@@ -1075,10 +1551,23 @@ class GameScene extends Phaser.Scene {
     document.getElementById('winKills').textContent = this.enemiesKilled;
     document.getElementById('winLives').textContent = this.lives;
     document.getElementById('winScreen').style.display = 'flex';
-    if (this._canvas) {
-      this._canvas.style.display = 'none';
-      this._canvas.style.pointerEvents = 'none';
-    }
+    if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
+  }
+
+  _toggleSpeed() {
+    this.gameSpeed = this.gameSpeed === 1 ? 2 : 1;
+    document.getElementById('speedToggle').textContent = `⏩ ${this.gameSpeed}x`;
+  }
+
+  _updateWavePreview() {
+    const el = document.getElementById('wavePreview');
+    if (this.waveActive || this.wave >= TOTAL_WAVES) { el.style.display = 'none'; return; }
+    const next = getWaveEnemies(this.wave + 1);
+    const counts = {};
+    next.forEach(t => counts[t] = (counts[t]||0) + 1);
+    el.innerHTML = '<span style="color:#88ddff;font-size:9px;font-weight:700;">NEXT:</span>' +
+      Object.entries(counts).map(([t,c]) => `<span title="${ENEMY_DEFS[t].name} x${c}">${ENEMY_DEFS[t].icon}${c>1?c:''}</span>`).join('');
+    el.style.display = 'flex';
   }
 
   _updateHUD() {
@@ -1086,7 +1575,25 @@ class GameScene extends Phaser.Scene {
     document.getElementById('goldVal').textContent = this.gold;
     document.getElementById('waveVal').textContent = this.wave;
     this.redrawCoreBar();
+    this._updateBtnStates();
+
+    // Combo display
+    const comboEl = document.getElementById('combo');
+    const comboVal = document.getElementById('comboVal');
+    if (this.combo > 1) {
+      comboEl.classList.add('active');
+      comboVal.textContent = `COMBO x${this.combo}`;
+      let col = '#44ff88';
+      if (this.combo >= 10) col = '#ffffff';
+      else if (this.combo >= 7) col = '#ff4466';
+      else if (this.combo >= 5) col = '#ff8844';
+      else if (this.combo >= 3) col = '#ffdd44';
+      comboEl.style.color = col;
+    } else {
+      comboEl.classList.remove('active');
+    }
   }
+  updateHUD() { this._updateHUD(); }
 
   _updateBtnStates() {
     document.querySelectorAll('.tower-btn').forEach(b => {
@@ -1096,17 +1603,53 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- MAIN LOOP ----------
-  update() {
+  update(time, delta) {
     if (!this.gameStarted || this.gameOver) return;
     this._updateEnemies();
     this._updateTowers();
     this._updateProjectiles();
+    this._updatePowerUps();
+
+    // Combo decay
+    if (this.combo > 0 && time - this.lastKillTime > 2000) {
+      this.combo = 0;
+      this._updateHUD();
+    }
+
+    // Expire active powers
+    let dirty = false;
+    Object.keys(this.activePowers).forEach(k => {
+      if (this.activePowers[k] < time) {
+        delete this.activePowers[k];
+        if (k === 'shield') this.shieldBuffer = 0;
+        dirty = true;
+      }
+    });
+    if (dirty) this._renderInventory();
+
+    // GPS update every second
+    if (time - this.lastGpsUpdate > 1000) {
+      this.lastGpsUpdate = time;
+      const elapsed = Math.max(1, (time - this.goldStartTime)/1000);
+      const gps = this.gameStarted && this.wave > 0 ? (this.goldEarned / elapsed) : 0;
+      document.getElementById('gps').textContent = gps > 0 ? `(${gps.toFixed(1)}/s)` : '';
+    }
+
+    // Auto-start countdown
+    if (this.autoStartTimer > 0 && !this.waveActive && !this.gameOver && this.wave < TOTAL_WAVES) {
+      this.autoStartTimer -= delta;
+      const secs = Math.max(0, Math.ceil(this.autoStartTimer/1000));
+      document.getElementById('countdown').textContent = `Auto-start in ${secs}s`;
+      if (this.autoStartTimer <= 0) {
+        document.getElementById('countdown').style.display = 'none';
+        this._startWave();
+      }
+    }
   }
 }
 
 const config = {
   type: Phaser.AUTO,
-  parent: 'gameContainer',
   width: MAP_W, height: MAP_H,
   backgroundColor: '#0a0a1a',
   scale: {
@@ -1114,6 +1657,7 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     setMinMax: [360, 480, MAP_W, MAP_H],
   },
+  parent: 'gameContainer',
   physics: { default:'arcade', arcade:{debug:false} },
   scene:[GameScene],
   render:{antialias:true, pixelArt:false},
