@@ -370,15 +370,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function screenToWorld(scene, clientX, clientY) {
       const cam = scene.cameras.main;
-      // Get game canvas bounding rect (the visible scaled area)
-      const rect = cam.canvas.getBoundingClientRect();
+      // Get the actual game canvas — in Phaser 3.80.1 use scene.game.canvas
+      const canvas = scene.game ? scene.game.canvas : cam.canvas;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
       if (!rect || rect.width === 0 || rect.height === 0) return null;
       // Position within the visible game area
       const localX = clientX - rect.left;
       const localY = clientY - rect.top;
       // Scale factor: game pixels per CSS pixel
-      const scaleX = cam.game.canvas.width / rect.width;
-      const scaleY = cam.game.canvas.height / rect.height;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
       // World coordinates (offset by camera scroll)
       const wx = localX * scaleX + cam.scrollX;
       const wy = localY * scaleY + cam.scrollY;
@@ -395,7 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!cell) return;
       // Build minimal pointer-like object for double-tap + tooltip logic
       const fakePtr = { x: cell.x, y: cell.y };
-      cell._onCellDown(fakePtr, cell);
+      // _onCellDown is a method on GameScene, NOT on the cell
+      scene._onCellDown(fakePtr, cell);
     }
     inputLayer.addEventListener('pointerdown', (e) => {
       e.preventDefault();
