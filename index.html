@@ -189,9 +189,31 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 <script>
-// ============================================================
-//  NEON DEFENSE v2 — Fixed & Enhanced
-// ============================================================
+// Safety net: register start button handler immediately, before Phaser boots
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('startBtn');
+  if (btn) btn.addEventListener('click', () => {
+    // Trigger the Phaser scene's _begin() if game has initialized
+    // Otherwise, hide the start screen manually as fallback
+    if (window._gameScene && window._gameScene._begin) window._gameScene._begin();
+    else document.getElementById('startScreen').style.display = 'none';
+  });
+  // Also handle restart buttons
+  ['restartBtn','restartBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', () => location.reload());
+  });
+  // Start wave button
+  const sw = document.getElementById('startWave');
+  if (sw) sw.addEventListener('click', () => {
+    if (window._gameScene && window._gameScene._startWave) window._gameScene._startWave();
+  });
+  // Sell tower button
+  const st = document.getElementById('sellTower');
+  if (st) st.addEventListener('click', () => {
+    if (window._gameScene && window._gameScene._sellSelected) window._gameScene._sellSelected();
+  });
+});
 
 const COLS = 12, ROWS = 16, CELL = 48;
 const MAP_W = COLS * CELL, MAP_H = ROWS * CELL;
@@ -276,6 +298,8 @@ class GameScene extends Phaser.Scene {
   constructor() { super({key:'GS'}); }
 
   create() {
+    // Expose scene globally for safety-net button handlers
+    window._gameScene = this;
     // State
     this.gold = 250; this.lives = 20; this.wave = 0;
     this.waveActive = false; this.enemiesRemaining = 0;
@@ -286,19 +310,13 @@ class GameScene extends Phaser.Scene {
 
     this.enemies = []; this.towers = []; this.projectiles = [];
 
-    // Hide canvas pointer-events until game starts (prevents overlay blocks)
-    this.canvas = this.game.canvas;
-    this.canvas.style.pointerEvents = 'none';
+    // Block canvas touches so overlays work during start screen
+    const cv = document.querySelector('canvas');
+    if (cv) cv.style.pointerEvents = 'none';
+    this._canvas = cv;
 
-    // Scale
-    this.scale.scaleMode = Phaser.Scale.FIT;
-    this.scale.autoCenter = Phaser.Scale.CENTER_BOTH;
-    this.scale.setMinMax(360, 480, MAP_W, MAP_H);
-
-    // Camera
+    // Background color
     this.cameras.main.setBackgroundColor('#0a0a1a');
-    this.cameras.main.zoom = Math.min(this.scale.width / MAP_W, this.scale.height / MAP_H) * 0.95;
-    this.cameras.main.centerOn(MAP_W/2, MAP_H/2);
 
     // Layers
     this.createTextures();
@@ -307,9 +325,12 @@ class GameScene extends Phaser.Scene {
     this.createGrid();
     this.createCore();
     this.createUI();
-    this.setupInput();
 
     this.updateHUD();
+    // Center camera once scale is resolved
+    this.time.delayedCall(100, () => {
+      this.cameras.main.centerOn(MAP_W/2, MAP_H/2);
+    });
   }
 
   // ---------- PROCEDURAL TEXTURES (ENHANCED) ----------
@@ -1020,8 +1041,7 @@ class GameScene extends Phaser.Scene {
   _begin() {
     document.getElementById('startScreen').style.display = 'none';
     this.gameStarted = true;
-    // Allow canvas to receive touches now that game is active
-    if (this.canvas) this.canvas.style.pointerEvents = 'auto';
+    if (this._canvas) this._canvas.style.pointerEvents = 'auto';
   }
   _gameOver() {
     this.gameOver = true;
@@ -1029,8 +1049,7 @@ class GameScene extends Phaser.Scene {
     document.getElementById('finalTowers').textContent = this.towersBuilt;
     document.getElementById('finalKills').textContent = this.enemiesKilled;
     document.getElementById('gameOverScreen').style.display = 'flex';
-    // Block canvas pointer-events so overlay buttons work
-    if (this.canvas) this.canvas.style.pointerEvents = 'none';
+    if (this._canvas) this._canvas.style.pointerEvents = 'none';
   }
   _win() {
     this.gameOver = true;
@@ -1038,7 +1057,7 @@ class GameScene extends Phaser.Scene {
     document.getElementById('winKills').textContent = this.enemiesKilled;
     document.getElementById('winLives').textContent = this.lives;
     document.getElementById('winScreen').style.display = 'flex';
-    if (this.canvas) this.canvas.style.pointerEvents = 'none';
+    if (this._canvas) this._canvas.style.pointerEvents = 'none';
   }
 
   _updateHUD() {
