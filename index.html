@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Neon Defense</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; overflow: hidden; touch-action: none; -webkit-tap-highlight-color: transparent; }
+#gameCanvas { display: block; }
+
+/* HUD Overlay */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 56px; padding: 8px 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+  pointer-events: none; z-index: 10; font-family: 'Segoe UI', sans-serif;
+}
+.hud-item {
+  display: flex; align-items: center; gap: 6px;
+  color: #fff; font-size: 14px; font-weight: 600;
+  text-shadow: 0 0 8px currentColor;
+}
+.hud-icon { font-size: 18px; }
+#lives { color: #ff4466; }
+#gold { color: #ffcc00; }
+#wave { color: #88ddff; }
+
+/* Tower Panel */
+#towerPanel {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; gap: 6px; padding: 8px 10px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 70%, transparent 100%);
+  z-index: 10; justify-content: center; flex-wrap: wrap;
+}
+.tower-btn {
+  width: 64px; height: 72px; border: 2px solid #333; border-radius: 10px;
+  background: rgba(20,20,40,0.9); color: #fff; font-size: 10px; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; cursor: pointer; transition: all 0.15s; position: relative;
+  font-family: 'Segoe UI', sans-serif;
+}
+.tower-btn.selected { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,0.4); transform: scale(1.08); }
+.tower-btn.disabled { opacity: 0.4; pointer-events: none; }
+.tower-btn .tower-icon { font-size: 22px; }
+.tower-btn .tower-cost { color: #ffcc00; font-size: 11px; }
+.tower-btn .tower-name { font-size: 9px; opacity: 0.8; }
+
+/* Wave & Start Buttons */
+#actionBar {
+  position: absolute; top: 64px; right: 12px; z-index: 10;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.action-btn {
+  padding: 8px 16px; border: 2px solid; border-radius: 8px;
+  background: rgba(20,20,40,0.9); color: #fff; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: 'Segoe UI', sans-serif; text-transform: uppercase; letter-spacing: 1px;
+}
+#startWave { border-color: #00ff88; color: #00ff88; text-shadow: 0 0 8px #00ff88; }
+#startWave:hover, #startWave:active { background: rgba(0,255,136,0.2); }
+#sellTower { border-color: #ff6644; color: #ff6644; text-shadow: 0 0 8px #ff6644; }
+
+/* Start Screen */
+#startScreen {
+  position: absolute; inset: 0; z-index: 100;
+  background: radial-gradient(ellipse at center, #0a0a2e 0%, #050510 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+#startScreen h1 {
+  font-size: 42px; color: #fff; text-shadow: 0 0 20px #8844ff, 0 0 40px #8844ff;
+  margin-bottom: 8px; letter-spacing: 4px;
+}
+#startScreen .subtitle {
+  font-size: 16px; color: #8844ff; margin-bottom: 40px; text-shadow: 0 0 10px #8844ff;
+}
+#startBtn {
+  padding: 16px 48px; font-size: 20px; font-weight: 700;
+  border: 2px solid #00ff88; border-radius: 12px; background: rgba(0,255,136,0.15);
+  color: #00ff88; cursor: pointer; text-transform: uppercase; letter-spacing: 3px;
+  text-shadow: 0 0 10px #00ff88; box-shadow: 0 0 20px rgba(0,255,136,0.3);
+  font-family: 'Segoe UI', sans-serif;
+}
+.instructions {
+  margin-top: 30px; color: #667; font-size: 13px; text-align: center; line-height: 1.8;
+}
+
+/* Game Over Screen */
+#gameOverScreen {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(5,5,16,0.92);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+#gameOverScreen h1 {
+  font-size: 48px; color: #ff4466;
+  text-shadow: 0 0 20px #ff4466, 0 0 40px #ff4466;
+  margin-bottom: 10px;
+}
+#gameOverScreen .stats {
+  color: #aab; font-size: 16px; margin-bottom: 30px; text-align: center; line-height: 2;
+}
+#gameOverScreen .stats span { color: #ffcc00; font-weight: 700; }
+#restartBtn {
+  padding: 14px 40px; font-size: 18px; font-weight: 700;
+  border: 2px solid #8844ff; border-radius: 12px; background: rgba(136,68,255,0.15);
+  color: #8844ff; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+  text-shadow: 0 0 10px #8844ff; box-shadow: 0 0 20px rgba(136,68,255,0.3);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Win Screen */
+#winScreen {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(5,5,16,0.92);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+#winScreen h1 {
+  font-size: 42px; color: #00ff88;
+  text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+  margin-bottom: 10px;
+}
+#winScreen .stats {
+  color: #aab; font-size: 16px; margin-bottom: 30px; text-align: center; line-height: 2;
+}
+#winScreen .stats span { color: #ffcc00; font-weight: 700; }
+
+/* Info tooltip for placed towers */
+#tooltip {
+  position: absolute; z-index: 50;
+  background: rgba(10,10,30,0.95); border: 1px solid #556;
+  border-radius: 8px; padding: 10px; color: #fff; font-size: 11px;
+  pointer-events: none; display: none; font-family: 'Segoe UI', sans-serif;
+  min-width: 140px;
+}
+#tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+#tooltip .tt-stat { color: #99a; }
+#tooltip .tt-stat span { color: #dde; font-weight: 600; }
+#tooltip .tt-action { color: #ff6644; margin-top: 6px; font-weight: 600; font-size: 10px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
+  <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> Wave <span id="waveVal">0</span> / <span id="totalWaves">25</span></div>
+  <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span></div>
+</div>
+
+<div id="actionBar">
+  <button class="action-btn" id="startWave">▶ Start Wave</button>
+  <button class="action-btn" id="sellTower">✖ Sell Selected</button>
+</div>
+
+<div id="towerPanel"></div>
+
+<div id="tooltip">
+  <div class="tt-name"></div>
+  <div class="tt-stat">DMG: <span id="ttDmg"></span></div>
+  <div class="tt-stat">Range: <span id="ttRange"></span></div>
+  <div class="tt-stat">Speed: <span id="ttSpeed"></span></div>
+  <div class="tt-stat">Total Spent: <span id="ttTotal"></span></div>
+  <div class="tt-action">Click to upgrade · Long-press to sell</div>
+</div>
+
+<div id="startScreen">
+  <h1>NEON DEFENSE</h1>
+  <div class="subtitle">⚡ Protect the Core ⚡</div>
+  <button id="startBtn">START GAME</button>
+  <div class="instructions">
+    Select a tower → tap the grid to place it<br>
+    Tap placed tower → upgrade it<br>
+    Long press placed tower → sell it<br>
+    Survive 25 waves!
+  </div>
+</div>
+
+<div id="gameOverScreen">
+  <h1>GAME OVER</h1>
+  <div class="stats">
+    Waves Survived: <span id="finalWave">0</span><br>
+    Towers Built: <span id="finalTowers">0</span><br>
+    Enemies Killed: <span id="finalKills">0</span>
+  </div>
+  <button id="restartBtn">PLAY AGAIN</button>
+</div>
+
+<div id="winScreen">
+  <h1>🏆 VICTORY!</h1>
+  <div class="stats">
+    All 25 Waves Cleared!<br>
+    Towers Built: <span id="winTowers">0</span><br>
+    Enemies Killed: <span id="winKills">0</span><br>
+    Lives Left: <span id="winLives">0</span>
+  </div>
+  <button id="restartBtn2">PLAY AGAIN</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script>
+// ============================================================
+//  NEON DEFENSE — Complete Tower Defense Game
+// ============================================================
+
+const COLS = 12, ROWS = 16, CELL = 48;
+const MAP_W = COLS * CELL, MAP_H = ROWS * CELL;
+const TOTAL_WAVES = 25;
+
+// --- Tower Definitions ---
+const TOWER_DEFS = {
+  archer:  { name: 'Archer',  icon: '🏹', cost: 60,  dmg: 18,  range: 120, fireRate: 800, color: 0x44ff88, projColor: 0x44ff88, type: 'single',  projSpeed: 350 },
+  cannon:  { name: 'Cannon',  icon: '💥', cost: 130, dmg: 55,  range: 100, fireRate: 1800, color: 0xff6644, projColor: 0xff6644, type: 'aoe',     projSpeed: 220, aoeRadius: 50 },
+  ice:     { name: 'Cryo',    icon: '❄️', cost: 100, dmg: 8,   range: 110, fireRate: 1200, color: 0x44ddff, projColor: 0x44ddff, type: 'slow',    projSpeed: 300, slowFactor: 0.4, slowDuration: 2000 },
+  lightning:{ name: 'Tesla',  icon: '⚡', cost: 200, dmg: 30,  range: 140, fireRate: 1400, color: 0xffdd44, projColor: 0xffdd44, type: 'chain',   projSpeed: 600, chainCount: 3, chainRange: 80 },
+  sniper:  { name: 'Sniper',  icon: '🎯', cost: 175, dmg: 80,  range: 200, fireRate: 2500, color: 0xff44aa, projColor: 0xff44aa, type: 'single',  projSpeed: 550 },
+};
+
+// --- Enemy Definitions ---
+const ENEMY_DEFS = {
+  normal: { hp: 60,  speed: 45, reward: 10,  color: 0xff3366, radius: 12, name: 'Scout' },
+  fast:   { hp: 35,  speed: 75, reward: 12,  color: 0xffaa22, radius: 9,  name: 'Runner' },
+  tank:   { hp: 200, speed: 28, reward: 25,  color: 0x8844ff, radius: 16, name: 'Heavy' },
+  healer: { hp: 80,  speed: 40, reward: 20,  color: 0x44ffaa, radius: 13, name: 'Healer', heals: true },
+  boss:   { hp: 800, speed: 22, reward: 80,  color: 0xff2222, radius: 22, name: 'Boss' },
+};
+
+// --- Path Generation (predefined winding path on the grid) ---
+// Using waypoints in pixel coordinates (center of cells)
+const PATH_POINTS = [
+  { x: 0,          y: 14 },
+  { x: 3,          y: 14 },
+  { x: 3,          y: 7 },
+  { x: 7,          y: 7 },
+  { x: 7,          y: 3 },
+  { x: 10, y: 3 },
+  { x: 10, y: 10 },
+  { x: 5,  y: 10 },
+  { x: 5,  y: 12 },
+  { x: 1,  y: 12 },
+  { x: 1,  y: 8 },
+  { x: 0,  y: 5 },
+];
+const PATH_PIXELS = PATH_POINTS.map(p => ({ x: p.x * CELL + CELL / 2, y: p.y * CELL + CELL / 2 }));
+
+// Calculate path distances
+let pathDistances = [0];
+for (let i = 1; i < PATH_PIXELS.length; i++) {
+  const dx = PATH_PIXELS[i].x - PATH_PIXELS[i-1].x;
+  const dy = PATH_PIXELS[i].y - PATH_PIXELS[i-1].y;
+  pathDistances.push(pathDistances[i-1] + Math.sqrt(dx*dx + dy*dy));
+}
+const totalPathLength = pathDistances[pathDistances.length - 1];
+
+function getPositionOnPath(distance) {
+  for (let i = 1; i < pathDistances.length; i++) {
+    if (distance <= pathDistances[i]) {
+      const segLen = pathDistances[i] - pathDistances[i-1];
+      const t = (distance - pathDistances[i-1]) / segLen;
+      return {
+        x: PATH_PIXELS[i-1].x + (PATH_PIXELS[i].x - PATH_PIXELS[i-1].x) * t,
+        y: PATH_PIXELS[i-1].y + (PATH_PIXELS[i].y - PATH_PIXELS[i-1].y) * t
+      };
+    }
+  }
+  return PATH_PIXELS[PATH_PIXELS.length - 1];
+}
+
+// --- Wave Definitions ---
+function getWaveEnemies(waveNum) {
+  const enemies = [];
+  if (waveNum <= 5) {
+    for (let i = 0; i < 6 + waveNum * 2; i++) enemies.push('normal');
+  } else if (waveNum <= 10) {
+    const count = 12 + waveNum;
+    for (let i = 0; i < count; i++) {
+      if (i % 4 === 0) enemies.push('fast');
+      else enemies.push('normal');
+    }
+  } else if (waveNum <= 15) {
+    const count = 14 + waveNum;
+    for (let i = 0; i < count; i++) {
+      const r = i % 6;
+      if (r === 0) enemies.push('tank');
+      else if (r === 1) enemies.push('fast');
+      else if (r === 3 && waveNum >= 12) enemies.push('healer');
+      else enemies.push('normal');
+    }
+  } else if (waveNum <= 24) {
+    const count = 18 + waveNum;
+    for (let i = 0; i < count; i++) {
+      const r = i % 7;
+      if (r === 0) enemies.push('tank');
+      else if (r === 1) enemies.push('fast');
+      else if (r === 2 && waveNum % 3 === 0) enemies.push('healer');
+      else enemies.push('normal');
+    }
+  }
+  // Boss every 5 waves
+  if (waveNum % 5 === 0 && waveNum > 0) enemies.push('boss');
+  return enemies;
+}
+
+function getEnemyHp(waveNum, enemyType) {
+  const def = ENEMY_DEFS[enemyType];
+  const scaling = 1 + (waveNum - 1) * 0.15;
+  return Math.floor(def.hp * scaling);
+}
+
+// ============================================================
+//  GAME SCENE
+// ============================================================
+class GameScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'GameScene' });
+  }
+
+  create() {
+    this.gold = 250;
+    this.lives = 20;
+    this.wave = 0;
+    this.waveActive = false;
+    this.enemiesRemaining = 0;
+    this.spawnQueue = [];
+    this.spawnTimer = 0;
+    this.towersBuilt = 0;
+    this.enemiesKilled = 0;
+    this.gameStarted = false;
+    this.gameOver = false;
+    this.towerSelected = null; // tower type key from panel
+    this.selectedPlacedTower = null; // placed tower reference
+    this.longPressTimer = null;
+    this.longPressFired = false;
+
+    this.enemies = [];
+    this.towers = [];
+    this.projectiles = [];
+    this.particles = [];
+    this.damageNumbers = [];
+    this.lightningBolts = [];
+
+    this.scale.fit(true, true);
+    this.scale.setScrollBounds(0, 0, MAP_W, MAP_H);
+
+    // Camera centers on the map
+    this.cameras.main.setViewport(0, 56, this.scale.width, this.scale.height - 56 - 90);
+    this.cameras.main.setBackgroundColor('#0a0a1a');
+
+    this.createProceduralTextures();
+    this.createMap();
+    this.createPath();
+    this.createCore();
+    this.createGridOverlay();
+
+    this.createTowerPanel();
+    this.setupUI();
+    this.setupInput();
+
+    this.updateHUD();
+    this.time.delayedCall(100, () => this.cameras.main.centerOn(MAP_W / 2, MAP_H / 2));
+  }
+
+  // ---- Procedural Textures ----
+  createProceduralTextures() {
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+
+    // Tower bases
+    // Archer tower
+    g.clear();
+    g.fillStyle(0x223322, 1); g.fillRoundedRect(0, 0, 40, 40, 6);
+    g.lineStyle(2, 0x44ff88, 1); g.strokeRoundedRect(0, 0, 40, 40, 6);
+    g.fillStyle(0x44ff88, 1);
+    g.fillTriangle(20, 6, 12, 24, 28, 24);
+    g.generateTexture('tower_archer', 40, 40);
+    g.destroy();
+
+    // Cannon tower
+    g.clear();
+    g.fillStyle(0x332222, 1); g.fillRoundedRect(0, 0, 42, 42, 6);
+    g.lineStyle(2, 0xff6644, 1); g.strokeRoundedRect(0, 0, 42, 42, 6);
+    g.fillStyle(0xff6644, 1);
+    g.fillCircle(21, 21, 10);
+    g.fillStyle(0x331111, 1);
+    g.fillCircle(21, 21, 5);
+    g.generateTexture('tower_cannon', 42, 42);
+    g.destroy();
+
+    // Ice tower
+    g.clear();
+    g.fillStyle(0x222233, 1); g.fillRoundedRect(0, 0, 40, 40, 6);
+    g.lineStyle(2, 0x44ddff, 1); g.strokeRoundedRect(0, 0, 40, 40, 6);
+    g.fillStyle(0x44ddff, 1);
+    g.fillRect(16, 4, 8, 32);
+    g.fillRect(4, 16, 32, 8);
+    g.generateTexture('tower_ice', 40, 40);
+    g.destroy();
+
+    // Lightning tower
+    g.clear();
+    g.fillStyle(0x333322, 1); g.fillRoundedRect(0, 0, 40, 40, 6);
+    g.lineStyle(2, 0xffdd44, 1); g.strokeRoundedRect(0, 0, 40, 40, 6);
+    g.fillStyle(0xffdd44, 1);
+    g.fillCircle(20, 20, 4);
+    g.lineStyle(2, 0xffdd44, 0.6);
+    g.lineBetween(20, 10, 12, 18);
+    g.lineBetween(20, 10, 28, 18);
+    g.lineBetween(20, 30, 12, 22);
+    g.lineBetween(20, 30, 28, 22);
+    g.generateTexture('tower_lightning', 40, 40);
+    g.destroy();
+
+    // Sniper tower
+    g.clear();
+    g.fillStyle(0x332233, 1); g.fillRoundedRect(0, 0, 40, 40, 6);
+    g.lineStyle(2, 0xff44aa, 1); g.strokeRoundedRect(0, 0, 40, 40, 6);
+    g.fillStyle(0xff44aa, 1);
+    g.fillCircle(20, 20, 6);
+    g.fillStyle(0x220022, 1);
+    g.fillCircle(20, 20, 3);
+    g.lineStyle(2, 0xff44aa, 0.5);
+    g.lineBetween(20, 20, 20, 4);
+    g.generateTexture('tower_sniper', 40, 40);
+    g.destroy();
+
+    // Enemy types
+    // Normal enemy
+    g.clear();
+    g.fillStyle(0xff3366, 1);
+    g.fillCircle(12, 12, 10);
+    g.fillStyle(0xff8899, 1);
+    g.fillCircle(10, 10, 4);
+    g.generateTexture('enemy_normal', 24, 24);
+    g.destroy();
+
+    // Fast enemy
+    g.clear();
+    g.fillStyle(0xffaa22, 1);
+    g.fillTriangle(12, 2, 2, 22, 22, 22);
+    g.fillStyle(0xffdd88, 1);
+    g.fillCircle(12, 14, 3);
+    g.generateTexture('enemy_fast', 24, 24);
+    g.destroy();
+
+    // Tank enemy
+    g.clear();
+    g.fillStyle(0x8844ff, 1);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0xaa77ff, 1);
+    g.fillCircle(13, 13, 5);
+    g.lineStyle(2, 0x6633cc, 1);
+    g.strokeCircle(16, 16, 14);
+    g.generateTexture('enemy_tank', 32, 32);
+    g.destroy();
+
+    // Healer enemy
+    g.clear();
+    g.fillStyle(0x44ffaa, 1);
+    g.fillCircle(13, 13, 11);
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(9, 4, 8, 3);
+    g.fillRect(4, 9, 3, 8);
+    g.generateTexture('enemy_healer', 26, 26);
+    g.destroy();
+
+    // Boss enemy
+    g.clear();
+    g.fillStyle(0xff2222, 1);
+    g.fillCircle(22, 22, 18);
+    g.fillStyle(0xff6666, 1);
+    g.fillCircle(16, 16, 6);
+    g.fillCircle(28, 16, 6);
+    g.fillStyle(0x440000, 1);
+    g.fillRect(10, 30, 24, 5);
+    g.lineStyle(3, 0xff8888, 1);
+    g.strokeCircle(22, 22, 18);
+    g.generateTexture('enemy_boss', 44, 44);
+    g.destroy();
+
+    // Projectile textures
+    g.clear();
+    g.fillStyle(0x44ff88, 1); g.fillCircle(4, 4, 4);
+    g.generateTexture('proj_archer', 8, 8);
+    g.destroy();
+
+    g.clear();
+    g.fillStyle(0xff6644, 1); g.fillCircle(6, 6, 6);
+    g.fillStyle(0xffaa88, 1); g.fillCircle(6, 6, 3);
+    g.generateTexture('proj_cannon', 12, 12);
+    g.destroy();
+
+    g.clear();
+    g.fillStyle(0x44ddff, 1); g.fillCircle(5, 5, 5);
+    g.generateTexture('proj_ice', 10, 10);
+    g.destroy();
+
+    g.clear();
+    g.fillStyle(0xffdd44, 1); g.fillCircle(5, 5, 5);
+    g.generateTexture('proj_lightning', 10, 10);
+    g.destroy();
+
+    g.clear();
+    g.fillStyle(0xff44aa, 1); g.fillRect(1, 1, 4, 10);
+    g.generateTexture('proj_sniper', 6, 12);
+    g.destroy();
+
+    // Grid cell (empty)
+    g.clear();
+    g.fillStyle(0x111122, 0.5); g.fillRect(0, 0, CELL, CELL);
+    g.lineStyle(1, 0x222244, 0.3); g.strokeRect(0, 0, CELL, CELL);
+    g.generateTexture('cell_empty', CELL, CELL);
+    g.destroy();
+
+    // Range indicator
+    g.clear();
+    g.fillStyle(0xffffff, 0.08);
+    g.fillCircle(200, 200, 200);
+    g.generateTexture('range_indicator', 400, 400);
+    g.destroy();
+
+    // Core (base to protect)
+    g.clear();
+    g.fillStyle(0x4488ff, 1);
+    g.fillCircle(24, 24, 20);
+    g.fillStyle(0x88bbff, 1);
+    g.fillCircle(24, 24, 12);
+    g.fillStyle(0xaaddff, 1);
+    g.fillCircle(24, 24, 6);
+    g.lineStyle(3, 0x66aaff, 1);
+    g.strokeCircle(24, 24, 20);
+    g.generateTexture('core', 48, 48);
+    g.destroy();
+
+    // Spawn indicator
+    g.clear();
+    g.fillStyle(0xff4466, 0.6);
+    g.fillCircle(16, 16, 14);
+    g.lineStyle(3, 0xff8899, 1);
+    g.strokeCircle(16, 16, 14);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(16, 16, 4);
+    g.generateTexture('spawn', 32, 32);
+    g.destroy();
+
+    // Explosion particle
+    g.clear();
+    const grad = g.createGradientStyle(0xffffff, 1, 0xffffff, 0, 16, 16, 'radial');
+    g.fillStyle(grad, 1);
+    g.fillCircle(16, 16, 16);
+    g.generateTexture('explosion', 32, 32);
+    g.destroy();
+
+    // Spark particle
+    g.clear();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture('spark', 6, 6);
+    g.destroy();
+  }
+
+  // ---- Map Rendering ----
+  createMap() {
+    this.mapGraphics = this.add.graphics();
+    this.drawMapBackground();
+  }
+
+  drawMapBackground() {
+    this.mapGraphics.clear();
+    this.mapGraphics.fillStyle(0x0d0d1a, 1);
+    this.mapGraphics.fillRect(0, 0, MAP_W, MAP_H);
+
+    // Draw subtle grid pattern
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const isPathCell = this.isPathCell(x, y);
+        if (isPathCell) {
+          this.mapGraphics.fillStyle(0x1a1a2e, 1);
+          this.mapGraphics.fillRect(x * CELL, y * CELL, CELL, CELL);
+          this.mapGraphics.lineStyle(1, 0x2a2a4e, 0.4);
+          this.mapGraphics.strokeRect(x * CELL, y * CELL, CELL, CELL);
+        }
+      }
+    }
+
+    // Decorative corner elements
+    this.mapGraphics.lineStyle(2, 0x222244, 0.3);
+    this.mapGraphics.strokeRect(2, 2, MAP_W - 4, MAP_H - 4);
+  }
+
+  isPathCell(col, row) {
+    for (let i = 0; i < PATH_POINTS.length - 1; i++) {
+      const a = PATH_POINTS[i], b = PATH_POINTS[i + 1];
+      if (a.x === b.x) {
+        if (col === a.x && row >= Math.min(a.y, b.y) && row <= Math.max(a.y, b.y)) return true;
+      } else {
+        if (row === a.y && col >= Math.min(a.x, b.x) && col <= Math.max(a.x, b.x)) return true;
+      }
+    }
+    return false;
+  }
+
+  createPath() {
+    this.pathGraphics = this.add.graphics();
+
+    // Path glow
+    this.pathGraphics.lineStyle(CELL * 0.7, 0x1a1a3e, 0.5);
+    for (let i = 1; i < PATH_PIXELS.length; i++) {
+      this.pathGraphics.lineBetween(PATH_PIXELS[i-1].x, PATH_PIXELS[i-1].y, PATH_PIXELS[i].x, PATH_PIXELS[i].y);
+    }
+
+    // Path line
+    this.pathGraphics.lineStyle(2, 0x333366, 0.6);
+    for (let i = 1; i < PATH_PIXELS.length; i++) {
+      this.pathGraphics.lineBetween(PATH_PIXELS[i-1].x, PATH_PIXELS[i-1].y, PATH_PIXELS[i].x, PATH_PIXELS[i].y);
+    }
+
+    // Dashed center line
+    this.pathGraphics.lineStyle(2, 0x444488, 0.2);
+    this.pathGraphics.setLineDash([8, 8]);
+    for (let i = 1; i < PATH_PIXELS.length; i++) {
+      this.pathGraphics.lineBetween(PATH_PIXELS[i-1].x, PATH_PIXELS[i-1].y, PATH_PIXELS[i].x, PATH_PIXELS[i].y);
+    }
+    this.pathGraphics.setLineDash([]);
+
+    // Spawn point marker
+    const spawnSprite = this.add.image(PATH_PIXELS[0].x, PATH_PIXELS[0].y, 'spawn');
+    spawnSprite.setDepth(1);
+
+    // Spawn label
+    const spawnLabel = this.add.text(PATH_PIXELS[0].x, PATH_PIXELS[0].y + 28, 'SPAWN', {
+      fontSize: '10px', color: '#ff4466', fontFamily: 'Segoe UI, sans-serif'
+    }).setOrigin(0.5).setDepth(1).setAlpha(0.6);
+
+    // Directional arrow at spawn
+    const arrow = this.add.text(PATH_PIXELS[0].x, PATH_PIXELS[0].y - 20, '▼', {
+      fontSize: '14px', color: '#ff4466', fontFamily: 'Segoe UI, sans-serif'
+    }).setOrigin(0.5).setDepth(1).setAlpha(0.7);
+  }
+
+  createCore() {
+    // Core is at the end of the path
+    const endPt = PATH_PIXELS[PATH_PIXELS.length - 1];
+    this.coreX = endPt.x;
+    this.coreY = endPt.y;
+
+    this.coreSprite = this.add.image(this.coreX, this.coreY, 'core').setDepth(5);
+    this.coreSprite.setScale(0.9);
+
+    // Core label
+    this.add.text(this.coreX, this.coreY + 30, 'CORE', {
+      fontSize: '10px', color: '#4488ff', fontFamily: 'Segoe UI, sans-serif'
+    }).setOrigin(0.5).setDepth(5).setAlpha(0.6);
+
+    // Core pulse animation
+    this.tweens.add({
+      targets: this.coreSprite,
+      alpha: 0.7,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  createGridOverlay() {
+    // Interactive grid for tower placement
+    this.gridGroup = this.add.group();
+    this.gridCells = [];
+
+    for (let row = 0; row < ROWS; row++) {
+      this.gridCells[row] = [];
+      for (let col = 0; col < COLS; col++) {
+        const cell = this.add.image(col * CELL + CELL / 2, row * CELL + CELL / 2, 'cell_empty')
+          .setDepth(2)
+          .setInteractive({ useHandCursor: true });
+
+        cell.gridCol = col;
+        cell.gridRow = row;
+        cell.isPath = this.isPathCell(col, row);
+        cell.hasTower = false;
+
+        // Hover highlight
+        cell.on('pointerover', () => {
+          if (this.gameStarted && !this.gameOver && !cell.isPath && !cell.hasTower) {
+            cell.setFillStyle(0x1a2244, 0.6);
+          }
+        });
+        cell.on('pointerout', () => {
+          cell.setFillStyle(0x111122, 0.5);
+          if (this.selectedPlacedTower) {
+            this.showRangeForTower(this.selectedPlacedTower);
+          }
+        });
+        cell.on('pointerdown', (pointer) => this.onCellClick(pointer, cell));
+        cell.on('pointerup', () => this.onCellRelease(cell));
+        cell.on('pointerupoutside', () => this.onCellRelease(cell));
+
+        this.gridCells[row][col] = cell;
+        this.gridGroup.add(cell);
+      }
+    }
+  }
+
+  // ---- UI Setup ----
+  createTowerPanel() {
+    const panel = document.getElementById('towerPanel');
+    panel.innerHTML = '';
+
+    Object.entries(TOWER_DEFS).forEach(([key, def]) => {
+      const btn = document.createElement('div');
+      btn.className = 'tower-btn';
+      btn.dataset.type = key;
+      btn.innerHTML = `
+        <div class="tower-icon">${def.icon}</div>
+        <div class="tower-name">${def.name}</div>
+        <div class="tower-cost">💰${def.cost}</div>
+      `;
+      btn.addEventListener('click', () => this.selectTowerType(key));
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); this.selectTowerType(key); });
+      panel.appendChild(btn);
+    });
+  }
+
+  setupUI() {
+    document.getElementById('startWave').addEventListener('click', () => this.startNextWave());
+    document.getElementById('startWave').addEventListener('touchend', (e) => {
+      e.preventDefault(); this.startNextWave();
+    });
+
+    document.getElementById('sellTower').addEventListener('click', () => this.sellSelectedTower());
+    document.getElementById('sellTower').addEventListener('touchend', (e) => {
+      e.preventDefault(); this.sellSelectedTower();
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => this.beginGame());
+    document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+    document.getElementById('restartBtn2').addEventListener('click', () => this.restartGame());
+  }
+
+  // ---- Input Handling ----
+  setupInput() {
+    // Pointer events on the canvas for touch support
+    this.input.on('pointerdown', (pointer) => {
+      if (!this.gameStarted || this.gameOver) return;
+      // Handle long press on non-grid areas
+      this.longPressTimer = this.time.delayedCall(500, () => {
+        this.longPressFired = true;
+      });
+    });
+
+    this.input.on('pointerup', (pointer) => {
+      if (this.longPressTimer) {
+        this.longPressTimer.remove();
+        this.longPressTimer = null;
+      }
+    });
+  }
+
+  selectTowerType(type) {
+    this.towerSelected = type;
+    this.selectedPlacedTower = null;
+    this.hideTooltip();
+    this.clearRangeIndicator();
+
+    document.querySelectorAll('.tower-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.type === type);
+    });
+  }
+
+  onCellClick(pointer, cell) {
+    if (!this.gameStarted || this.gameOver) return;
+    if (this.longPressFired) {
+      this.longPressFired = false;
+      this.longPressTimer = this.time.delayedCall(500, () => {
+        if (cell.hasTower) {
+          this.showTooltipForTower(cell.gridCol, cell.gridRow, pointer);
+        }
+      });
+      return;
+    }
+
+    if (cell.hasTower) {
+      // Show tooltip for existing tower
+      const tower = this.getTowerAt(cell.gridCol, cell.gridRow);
+      if (tower) {
+        this.selectedPlacedTower = tower;
+        this.showTooltipForTower(cell.gridCol, cell.gridRow, pointer);
+        this.showRangeForTower(tower);
+      }
+    } else if (this.towerSelected) {
+      // Place tower
+      this.placeTower(cell.gridCol, cell.gridRow, this.towerSelected);
+    }
+  }
+
+  onCellRelease(cell) {
+    if (this.longPressTimer) {
+      this.longPressTimer.remove();
+      this.longPressTimer = null;
+    }
+  }
+
+  // ---- Tower Placement ----
+  placeTower(col, row, type) {
+    const cell = this.gridCells[row][col];
+    if (cell.isPath || cell.hasTower) return;
+
+    const def = TOWER_DEFS[type];
+    if (this.gold < def.cost) return;
+
+    this.gold -= def.cost;
+    this.towersBuilt++;
+
+    const x = col * CELL + CELL / 2;
+    const y = row * CELL + CELL / 2;
+
+    const tower = {
+      key: type,
+      col, row,
+      x, y,
+      damage: def.dmg,
+      range: def.range,
+      fireRate: def.fireRate,
+      projSpeed: def.projSpeed,
+      totalSpent: def.cost,
+      level: 1,
+      lastFire: 0,
+      target: null,
+      slowFactor: def.slowFactor || 0,
+      slowDuration: def.slowDuration || 0,
+      aoeRadius: def.aoeRadius || 0,
+      chainCount: def.chainCount || 0,
+      chainRange: def.chainRange || 0,
+      projTex: `proj_${type}`,
+      sprite: this.add.image(x, y, `tower_${type}`).setDepth(3),
+      rangeSprite: null,
+    };
+
+    // Upgrade scaling
+    if (type === 'sniper') { tower.damage = 80; tower.range = 200; }
+    if (type === 'lightning') { tower.damage = 30; tower.chainCount = 3; tower.chainRange = 80; }
+
+    this.towers.push(tower);
+    cell.hasTower = true;
+
+    // Update button states
+    this.updateTowerButtonStates();
+    this.updateHUD();
+
+    // Placement effect
+    this.spawnParticles(x, y, def.color, 8, 60);
+  }
+
+  getTowerAt(col, row) {
+    return this.towers.find(t => t.col === col && t.row === row);
+  }
+
+  upgradeTower(tower) {
+    if (this.gameOver) return;
+    const cost = Math.floor(TOWER_DEFS[tower.key].cost * (0.6 + tower.level * 0.3));
+    if (this.gold < cost) return;
+    if (tower.level >= 5) return;
+
+    this.gold -= cost;
+    tower.totalSpent += cost;
+    tower.level++;
+
+    // Upgrade stats
+    const def = TOWER_DEFS[tower.key];
+    tower.damage = Math.floor(def.dmg * (1 + (tower.level - 1) * 0.4));
+    tower.range = Math.floor(def.range * (1 + (tower.level - 1) * 0.1));
+    tower.fireRate = Math.floor(def.fireRate * (1 - (tower.level - 1) * 0.1));
+    if (tower.chainCount) tower.chainCount += (tower.level >= 3) ? 1 : 0;
+    if (tower.aoeRadius) tower.aoeRadius = Math.floor(def.aoeRadius * (1 + (tower.level - 1) * 0.15));
+
+    // Visual feedback
+    this.spawnParticles(tower.x, tower.y, 0xffdd00, 12, 80);
+    this.showFloatingText(tower.x, tower.y - 20, `LVL ${tower.level}`, '#ffdd00');
+
+    this.updateHUD();
+    if (this.selectedPlacedTower === tower) {
+      this.showTooltipForTower(tower.col, tower.row, { x: tower.x, y: tower.y });
+    }
+  }
+
+  sellSelectedTower() {
+    if (!this.selectedPlacedTower) return;
+    this.sellTower(this.selectedPlacedTower);
+  }
+
+  sellTower(tower) {
+    const refund = Math.floor(tower.totalSpent * 0.6);
+    this.gold += refund;
+
+    // Remove sprite
+    if (tower.sprite) tower.sprite.destroy();
+    if (tower.rangeSprite) tower.rangeSprite.destroy();
+
+    // Clear grid cell
+    if (this.gridCells[tower.row]) {
+      this.gridCells[tower.row][tower.col].hasTower = false;
+    }
+
+    this.towers = this.towers.filter(t => t !== tower);
+    this.selectedPlacedTower = null;
+    this.hideTooltip();
+    this.clearRangeIndicator();
+    this.updateHUD();
+    this.updateTowerButtonStates();
+  }
+
+  // ---- Tooltip ----
+  showTooltipForTower(col, row, pointer) {
+    const tower = this.getTowerAt(col, row);
+    if (!tower) return;
+
+    const def = TOWER_DEFS[tower.key];
+    const tooltip = document.getElementById('tooltip');
+    const upgradeCost = Math.floor(def.cost * (0.6 + tower.level * 0.3));
+    const sellValue = Math.floor(tower.totalSpent * 0.6);
+
+    tooltip.querySelector('.tt-name').textContent = `${def.icon} ${def.name} Lv.${tower.level}`;
+    tooltip.querySelector('.tt-name').style.color = '#' + def.color.toString(16).padStart(6, '0');
+    document.getElementById('ttDmg').textContent = tower.damage;
+    document.getElementById('ttRange').textContent = tower.range;
+    document.getElementById('ttSpeed').textContent = (1000 / tower.fireRate).toFixed(1) + '/s';
+    document.getElementById('ttTotal').textContent = tower.totalSpent;
+
+    const ttAction = tooltip.querySelector('.tt-action');
+    if (tower.level < 5) {
+      ttAction.textContent = `Upgrade for 💰${upgradeCost} · Click to upgrade`;
+    } else {
+      ttAction.textContent = `MAX LEVEL · 💰${sellValue} to sell`;
+    }
+
+    // Position tooltip
+    const screenX = this.cameras.main.worldToPointer(pointer).x;
+    const screenY = this.cameras.main.worldToPointer(pointer).y;
+    tooltip.style.display = 'block';
+    tooltip.style.left = Math.min(screenX + 10, window.innerWidth - 160) + 'px';
+    tooltip.style.top = Math.min(screenY - 10, window.innerHeight - 120) + 'px';
+  }
+
+  hideTooltip() {
+    document.getElementById('tooltip').style.display = 'none';
+  }
+
+  // ---- Range Indicator ----
+  showRangeForTower(tower) {
+    this.clearRangeIndicator();
+    const def = TOWER_DEFS[tower.key];
+    tower.rangeSprite = this.add.image(tower.x, tower.y, 'range_indicator')
+      .setDepth(2)
+      .setTint(def.color)
+      .setAlpha(0.4);
+    tower.rangeSprite.setScale(tower.range / 200);
+  }
+
+  clearRangeIndicator() {
+    this.towers.forEach(t => {
+      if (t.rangeSprite) {
+        t.rangeSprite.destroy();
+        t.rangeSprite = null;
+      }
+    });
+  }
+
+  // ---- Wave Management ----
+  startNextWave() {
+    if (this.waveActive || this.gameOver || this.wave >= TOTAL_WAVES) return;
+
+    this.wave++;
+    this.waveActive = true;
+
+    const waveTypeList = getWaveEnemies(this.wave);
+    this.spawnQueue = [];
+
+    // Scale HP with wave
+    waveTypeList.forEach(type => {
+      const hp = getEnemyHp(this.wave, type);
+      this.spawnQueue.push({ type, hp });
+    });
+
+    this.enemiesRemaining = this.spawnQueue.length;
+
+    // Spawn enemies with intervals
+    let delay = 600;
+    if (this.wave > 10) delay = 450;
+    if (this.wave > 18) delay = 350;
+
+    this.spawnQueue.forEach((enemyData, i) => {
+      this.time.delayedCall(i * delay, () => {
+        if (!this.gameOver && this.spawnQueue.length > 0) {
+          this.spawnEnemy(enemyData.type, enemyData.hp);
+        }
+      });
+    });
+
+    this.updateHUD();
+
+    // Wave start announcement
+    this.showFloatingText(MAP_W / 2, MAP_H / 2, `WAVE ${this.wave}`, '#88ddff');
+  }
+
+  spawnEnemy(type, hp) {
+    const def = ENEMY_DEFS[type];
+    const enemySprite = this.add.image(PATH_PIXELS[0].x, PATH_PIXELS[0].y, `enemy_${type}`)
+      .setDepth(4);
+
+    const enemy = {
+      type,
+      sprite: enemySprite,
+      hp,
+      maxHp: hp,
+      baseSpeed: def.speed,
+      speed: def.speed,
+      reward: def.reward,
+      distance: 0,
+      x: PATH_PIXELS[0].x,
+      y: PATH_PIXELS[0].y,
+      radius: def.radius,
+      slowTimer: 0,
+      slowFactor: 1,
+      heals: def.heals || false,
+      healTimer: 0,
+      alive: true,
+    };
+
+    enemySprite.setScale(def.radius / 12);
+    this.enemies.push(enemy);
+  }
+
+  // ---- Enemy Movement & Logic ----
+  updateEnemies() {
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (!e.alive) continue;
+
+      // Slow effect timer
+      if (e.slowTimer > 0) {
+        e.slowTimer -= this.game.loop.actualDelta;
+        if (e.slowTimer <= 0) {
+          e.slowFactor = 1;
+        }
+      }
+
+      // Healer logic
+      if (e.heals) {
+        e.healTimer += this.game.loop.actualDelta;
+        if (e.healTimer >= 2000) {
+          e.healTimer = 0;
+          // Heal nearby enemies
+          this.enemies.forEach(other => {
+            if (other !== e && other.alive) {
+              const dx = other.x - e.x;
+              const dy = other.y - e.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 80) {
+                other.hp = Math.min(other.maxHp, other.hp + Math.floor(other.maxHp * 0.05));
+                this.spawnParticles(other.x, other.y, 0x44ffaa, 3, 30);
+              }
+            }
+          });
+        }
+      }
+
+      const moveAmount = e.speed * e.slowFactor * (this.game.loop.actualDelta / 1000);
+      e.distance += moveAmount;
+
+      const pos = getPositionOnPath(e.distance);
+      e.x = pos.x;
+      e.y = pos.y;
+      e.sprite.setPosition(e.x, e.y);
+
+      // Check if enemy reached the core
+      if (e.distance >= totalPathLength) {
+        e.alive = false;
+        e.sprite.destroy();
+        this.enemies.splice(i, 1);
+        this.lives--;
+        this.updateHUD();
+
+        // Screen flash red
+        this.cameras.main.flash(200, 255, 0, 0, true);
+
+        if (this.lives <= 0) {
+          this.triggerGameOver();
+          return;
+        }
+      }
+
+      // Check if enemy is dead
+      if (e.hp <= 0 && e.alive) {
+        this.killEnemy(e, i);
+      }
+    }
+  }
+
+  killEnemy(enemy, index) {
+    enemy.alive = false;
+    this.gold += enemy.reward;
+    this.enemiesKilled++;
+
+    // Death effect
+    this.spawnParticles(enemy.x, enemy.y, ENEMY_DEFS[enemy.type].color, 10, 60);
+    this.showFloatingText(enemy.x, enemy.y - 15, `+${enemy.reward}`, '#ffcc00');
+
+    enemy.sprite.destroy();
+    this.enemies.splice(index, 1);
+
+    this.enemiesRemaining--;
+    this.updateHUD();
+
+    // Check wave complete
+    if (this.enemiesRemaining <= 0 && !this.waveActive && !this.gameOver) {
+      this.waveActive = false;
+      // Wave clear bonus
+      const bonus = 20 + this.wave * 5;
+      this.gold += bonus;
+      this.showFloatingText(MAP_W / 2, MAP_H / 2 - 30, `WAVE ${this.wave} CLEAR! +${bonus}`, '#00ff88');
+      this.updateHUD();
+
+      // Check win
+      if (this.wave >= TOTAL_WAVES) {
+        this.triggerWin();
+      }
+    }
+  }
+
+  // ---- Tower Firing Logic ----
+  updateTowers() {
+    const time = this.time.now;
+
+    this.towers.forEach(tower => {
+      if (time < tower.lastFire + tower.fireRate) return;
+
+      // Find target
+      let bestTarget = null;
+      let bestProgress = -1;
+
+      for (const enemy of this.enemies) {
+        if (!enemy.alive) continue;
+        const dx = enemy.x - tower.x;
+        const dy = enemy.y - tower.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= tower.range) {
+          // Prioritize enemies furthest along the path
+          if (enemy.distance > bestProgress) {
+            bestProgress = enemy.distance;
+            bestTarget = enemy;
+          }
+        }
+      }
+
+      if (!bestTarget) {
+        // No target in range, clear range indicator if it's the selected tower
+        if (this.selectedPlacedTower === tower) {
+          this.showRangeForTower(tower);
+        }
+        return;
+      }
+
+      tower.lastFire = time;
+      tower.target = bestTarget;
+
+      this.fireProjectile(tower, bestTarget);
+    });
+  }
+
+  fireProjectile(tower, target) {
+    const angle = Phaser.Math.Angle.Between(tower.x, tower.y, target.x, target.y);
+
+    const proj = this.add.image(tower.x, tower.y, tower.projTex)
+      .setDepth(4);
+
+    const projData = {
+      sprite: proj,
+      x: tower.x,
+      y: tower.y,
+      target: target,
+      speed: tower.projSpeed,
+      damage: tower.damage,
+      type: tower.key,
+      aoeRadius: tower.aoeRadius,
+      slowFactor: tower.slowFactor,
+      slowDuration: tower.slowDuration,
+      chainCount: tower.chainCount,
+      chainRange: tower.chainRange,
+      alive: true,
+    };
+
+    this.projectiles.push(projData);
+
+    // Muzzle flash
+    this.spawnParticles(tower.x + Math.cos(angle) * 15, tower.y + Math.sin(angle) * 15, TOWER_DEFS[tower.key].color, 3, 20);
+  }
+
+  updateProjectiles() {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      if (!p.alive) {
+        p.sprite.destroy();
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Move toward target (or current target position if target died)
+      const tx = p.target && p.target.alive ? p.target.x : p.x;
+      const ty = p.target && p.target.alive ? p.target.y : p.y;
+      const angle = Phaser.Math.Angle.Between(p.x, p.y, tx, ty);
+
+      p.x += Math.cos(angle) * p.speed * (this.game.loop.actualDelta / 1000);
+      p.y += Math.sin(angle) * p.speed * (this.game.loop.actualDelta / 1000);
+      p.sprite.setPosition(p.x, p.y);
+
+      // Check collision with target
+      const dx = p.x - tx;
+      const dy = p.y - ty;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 10 && p.target && p.target.alive) {
+        // Hit!
+        this.hitEnemy(p.target, p.damage, p);
+
+        // AoE
+        if (p.aoeRadius > 0) {
+          this.enemies.forEach(enemy => {
+            if (!enemy.alive || enemy === p.target) return;
+            const d = Phaser.Math.Distance.Between(p.x, p.y, enemy.x, enemy.y);
+            if (d <= p.aoeRadius) {
+              this.hitEnemy(enemy, Math.floor(p.damage * 0.5), p);
+            }
+          });
+          // AoE explosion effect
+          this.spawnParticles(p.x, p.y, 0xff6644, 15, 80);
+          this.showFloatingText(p.x, p.y - 20, '💥', '#ff6644');
+        }
+
+        // Slow effect
+        if (p.slowFactor > 0) {
+          p.target.slowFactor = p.slowFactor;
+          p.target.slowTimer = p.slowDuration;
+          this.spawnParticles(p.x, p.y, 0x44ddff, 6, 40);
+        }
+
+        // Chain lightning
+        if (p.chainCount > 0 && p.target.alive) {
+          this.chainLightning(p.target, p.chainCount, p.chainRange, p.damage);
+        }
+
+        p.alive = false;
+      }
+
+      // Remove if out of bounds
+      if (p.x < -50 || p.x > MAP_W + 50 || p.y < -50 || p.y > MAP_H + 50) {
+        p.alive = false;
+      }
+    }
+  }
+
+  hitEnemy(enemy, damage, projectile) {
+    enemy.hp -= damage;
+    this.showFloatingText(enemy.x, enemy.y - enemy.radius - 5, `-${damage}`, '#ff4466');
+    this.spawnParticles(enemy.x, enemy.y, 0xffffff, 4, 30);
+  }
+
+  chainLightning(source, count, chainRange, baseDamage) {
+    let lastTarget = source;
+    let chained = [];
+
+    for (let i = 0; i < count; i++) {
+      let bestTarget = null;
+      let bestDist = chainRange;
+
+      this.enemies.forEach(enemy => {
+        if (!enemy.alive || chained.includes(enemy) || enemy === source) return;
+        const d = Phaser.Math.Distance.Between(lastTarget.x, lastTarget.y, enemy.x, enemy.y);
+        if (d < bestDist) {
+          bestDist = d;
+          bestTarget = enemy;
+        }
+      });
+
+      if (!bestTarget) break;
+
+      chained.push(bestTarget);
+
+      // Draw lightning bolt
+      this.drawLightningBolt(lastTarget.x, lastTarget.y, bestTarget.x, bestTarget.y, 0xffdd44);
+
+      // Apply damage
+      this.hitEnemy(bestTarget, Math.floor(baseDamage * 0.6), null);
+
+      // Chain particle effect
+      this.spawnParticles(bestTarget.x, bestTarget.y, 0xffdd44, 5, 40);
+
+      lastTarget = bestTarget;
+    }
+  }
+
+  drawLightningBolt(x1, y1, x2, y2, color) {
+    const segments = 6;
+    const boltGraphics = this.add.graphics().setDepth(6);
+    boltGraphics.lineStyle(2, color, 1);
+    boltGraphics.beginPath();
+    boltGraphics.moveTo(x1, y1);
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const mx = Phaser.Math.Linear(x1, x2, t);
+      const my = Phaser.Math.Linear(y1, y2, t);
+      const offset = Phaser.Math.Between(-15, 15) * (1 - Math.abs(t - 0.5) * 2);
+      const nx = -(y2 - y1) / Math.max(1, Math.sqrt((x2-x1)**2 + (y2-y1)**2)) * offset;
+      const ny = (x2 - x1) / Math.max(1, Math.sqrt((x2-x1)**2 + (y2-y1)**2)) * offset;
+      boltGraphics.lineTo(mx + nx, my + ny);
+    }
+    boltGraphics.lineTo(x2, y2);
+    boltGraphics.strokePath();
+
+    // Fade out lightning
+    this.tweens.add({
+      targets: boltGraphics,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => boltGraphics.destroy(),
+    });
+  }
+
+  // ---- Particles & Effects ----
+  spawnParticles(x, y, color, count, speed) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = speed * (0.5 + Math.random());
+      const lifetime = 300 + Math.random() * 400;
+
+      const particle = this.add.image(x, y, 'spark').setDepth(5);
+      particle.setTint(color);
+      particle.setScale(0.5 + Math.random() * 0.8);
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * spd,
+        y: y + Math.sin(angle) * spd,
+        alpha: 0,
+        scaleX: 0,
+        scaleY: 0,
+        duration: lifetime,
+        ease: 'Power2',
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
+  showFloatingText(x, y, text, color) {
+    const txt = this.add.text(x, y, text, {
+      fontSize: '14px',
+      fontFamily: 'Segoe UI, sans-serif',
+      color: color,
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(7);
+
+    this.tweens.add({
+      targets: txt,
+      y: y - 40,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => txt.destroy(),
+    });
+  }
+
+  // ---- Game State Management ----
+  beginGame() {
+    document.getElementById('startScreen').style.display = 'none';
+    this.gameStarted = true;
+  }
+
+  triggerGameOver() {
+    this.gameOver = true;
+    document.getElementById('finalWave').textContent = this.wave;
+    document.getElementById('finalTowers').textContent = this.towersBuilt;
+    document.getElementById('finalKills').textContent = this.enemiesKilled;
+    document.getElementById('gameOverScreen').style.display = 'flex';
+  }
+
+  triggerWin() {
+    this.gameOver = true;
+    document.getElementById('winTowers').textContent = this.towersBuilt;
+    document.getElementById('winKills').textContent = this.enemiesKilled;
+    document.getElementById('winLives').textContent = this.lives;
+    document.getElementById('winScreen').style.display = 'flex';
+  }
+
+  restartGame() {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('winScreen').style.display = 'none';
+    location.reload();
+  }
+
+  updateHUD() {
+    document.getElementById('livesVal').textContent = this.lives;
+    document.getElementById('goldVal').textContent = this.gold;
+    document.getElementById('waveVal').textContent = this.wave;
+    document.getElementById('totalWaves').textContent = TOTAL_WAVES;
+  }
+
+  updateTowerButtonStates() {
+    document.querySelectorAll('.tower-btn').forEach(btn => {
+      const type = btn.dataset.type;
+      const cost = TOWER_DEFS[type].cost;
+      btn.classList.toggle('disabled', this.gold < cost);
+    });
+  }
+
+  // ---- Main Update Loop ----
+  update() {
+    if (!this.gameStarted || this.gameOver) return;
+
+    this.updateEnemies();
+    this.updateTowers();
+    this.updateProjectiles();
+  }
+}
+
+// ============================================================
+//  GAME CONFIG & INIT
+// ============================================================
+const config = {
+  type: Phaser.AUTO,
+  width: MAP_W,
+  height: MAP_H,
+  backgroundColor: '#0a0a1a',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  physics: {
+    default: 'arcade',
+    arcade: { debug: false },
+  },
+  scene: [GameScene],
+  render: {
+    antialias: true,
+    pixelArt: false,
+  },
+};
+
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
