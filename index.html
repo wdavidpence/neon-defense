@@ -873,34 +873,67 @@ class GameScene extends Phaser.Scene {
   }
 
   createPath() {
+    // Enhanced path visibility with glow effects
     this.pathGfx = this.add.graphics().setDepth(1);
-    this.pathGfx.lineStyle(CELL*0.65, 0x1a1a44, 0.4);
+    
+    // Outer glow (wide, dim)
+    this.pathGfx.lineStyle(CELL*0.8, 0x1a1a44, 0.3);
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
-    this.pathGfx.lineStyle(CELL*0.5, 0x252548, 0.6);
+    
+    // Mid glow (medium width)
+    this.pathGfx.lineStyle(CELL*0.6, 0x222266, 0.5);
     for (let i = 1; i < PATH.length; i++)
       this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
-    this.pathGfx.lineStyle(2, 0x444488, 0.25);
-    // NOTE: setLineDash() is a Canvas 2D method — Phaser.GameObjects.Graphics doesn't have it.
-    // Simulate dashed line by drawing short segments along each path edge.
-    const DASH = 6, GAP = 6;
-    for (let i = 1; i < PATH.length; i++) {
-      const ax = PATH[i-1].x, ay = PATH[i-1].y;
-      const bx = PATH[i].x,   by = PATH[i].y;
-      const dx = bx - ax, dy = by - ay;
-      const len = Math.sqrt(dx*dx + dy*dy);
-      const ux = dx / len, uy = dy / len;
-      let t = 0;
-      while (t < len) {
-        const t2 = Math.min(t + DASH, len);
-        this.pathGfx.lineBetween(ax + ux*t, ay + uy*t, ax + ux*t2, ay + uy*t2);
-        t = t2 + GAP;
-      }
-    }
-
+    
+    // Core path (narrow, bright)
+    this.pathGfx.lineStyle(CELL*0.45, 0x2a2a66, 0.7);
+    for (let i = 1; i < PATH.length; i++)
+      this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
+    
+    // Animated pulse along path (subtle neon glow)
+    this.pathPulse = this.add.graphics().setDepth(1);
+    this.animatePathPulse();
+    
+    // Spawn point marker (enhanced)
     const sp = this.add.image(PATH[0].x, PATH[0].y, 'spawn').setDepth(1);
-    this.add.text(PATH[0].x, PATH[0].y+22, 'SPAWN', {fontSize:'9px',color:'#ff4466',fontFamily:'Segoe UI,system-ui,sans-serif'})
-      .setOrigin(0.5).setDepth(1).setAlpha(0.5);
+    this.tweens.add({targets:sp, scale:1.15, duration:1000, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+    this.add.text(PATH[0].x, PATH[0].y+CELL*0.6, 'SPAWN', {fontSize:Math.max(8,CELL*0.18)+'px',color:'#ff4466',fontFamily:'Segoe UI,system-ui,sans-serif'})
+      .setOrigin(0.5).setDepth(1).setAlpha(0.7);
+  }
+  
+  animatePathPulse() {
+    // Subtle animated glow along path using particles
+    const pulsePath = this.add.graphics().setDepth(1);
+    let pulseOffset = 0;
+    
+    const pulseLoop = () => {
+      pulsePath.clear();
+      pulseOffset = (pulseOffset + 1) % Math.floor(CELL * 2);
+      
+      for (let i = 1; i < PATH.length; i++) {
+        const ax = PATH[i-1].x, ay = PATH[i-1].y;
+        const bx = PATH[i].x,   by = PATH[i].y;
+        const dx = bx - ax, dy = by - ay;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const ux = dx / len, uy = dy / len;
+        
+        // Draw pulsing segment along path
+        const segLen = CELL * 0.8;
+        const t = (pulseOffset % (len - segLen + 1));
+        if (t >= 0 && t <= len - segLen) {
+          const startX = ax + ux * t;
+          const startY = ay + uy * t;
+          const endX = ax + ux * (t + segLen);
+          const endY = ay + uy * (t + segLen);
+          pulsePath.lineStyle(CELL * 0.3, 0x4444aa, 0.15);
+          pulsePath.lineBetween(startX, startY, endX, endY);
+        }
+      }
+      
+      this.time.delayedCall(50, () => pulseLoop());
+    };
+    pulseLoop();
   }
 
   createCore() {
@@ -950,6 +983,12 @@ class GameScene extends Phaser.Scene {
         const cell = this.add.image(col*CELL+CELL/2, row*CELL+CELL/2, isP?'cell_path':'cell').setDepth(2);
         cell.setInteractive({useHandCursor:true});
         cell._col = col; cell._row = row; cell._isPath = isP; cell._tower = null;
+        
+        // Add subtle border to path cells for better visibility
+        if (isP) {
+          cell.setTint(0x222255);
+        }
+        
         cell.on('pointerdown', (ptr) => this._onCellDown(ptr, cell));
         this.grid[row][col] = cell;
       }
