@@ -428,8 +428,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-const COLS = 12, ROWS = 16, CELL = 48;
-const MAP_W = COLS * CELL, MAP_H = ROWS * CELL;
+// Dynamic full-screen grid calculation
+let COLS, ROWS, CELL, MAP_W, MAP_H;
+function calcGrid() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Reserve space for HUD (top bar ~40px + bottom panel ~80px)
+  const gameH = vh - 120;
+  const gameW = vw;
+  // Target cell size ~42px, maximize grid
+  CELL = 42;
+  COLS = Math.floor(gameW / CELL);
+  ROWS = Math.floor(gameH / CELL);
+  // Ensure minimum playable grid
+  COLS = Math.max(8, Math.min(16, COLS));
+  ROWS = Math.max(12, Math.min(20, ROWS));
+  MAP_W = COLS * CELL;
+  MAP_H = ROWS * CELL;
+}
+calcGrid();
 const TOTAL_WAVES = 25;
 
 // === TOWER DEFINITIONS ===
@@ -1999,18 +2016,24 @@ class GameScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
-  width: MAP_W, height: MAP_H,
   backgroundColor: '#0a0a1a',
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    setMinMax: [360, 480, MAP_W, MAP_H],
   },
   parent: 'phaserWrap',
   physics: { default:'arcade', arcade:{debug:false} },
   scene:[GameScene],
   render:{antialias:true, pixelArt:false},
 };
+
+// Handle window resize - recalculate grid and restart scene
+window.addEventListener('resize', () => {
+  calcGrid();
+  if (window._gameScene) {
+    window._gameScene.scene.restart();
+  }
+});
 
 const game = new Phaser.Game(config);
 </script>
