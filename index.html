@@ -223,14 +223,14 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
     <b>Double-tap</b> a placed tower → upgrade<br>
     Tap 💰 to collect floating power-ups<br>
     Beware 🛡️ <b>Nimbus</b> — shielded enemy!<br>
-    Survive 25 waves to win!
+    Survive 30 waves (25 + 5 survival) to win!
   </div>
 </div>
 
 <div id="gameOverScreen" class="overlay-screen">
   <h1>GAME OVER</h1>
   <div class="stats">
-    Waves: <span id="finalWave">0</span> / 25<br>
+    Waves: <span id="finalWave">0</span> / 30<br>
     Towers: <span id="finalTowers">0</span><br>
     Kills: <span id="finalKills">0</span>
   </div>
@@ -479,7 +479,7 @@ function calcGrid() {
   MAP_H = ROWS * CELL;
 }
 calcGrid();
-const TOTAL_WAVES = 25;
+const TOTAL_WAVES = 30; // 25 base + 5 survival waves
 
 // === TOWER DEFINITIONS ===
 const TOWER_DEFS = {
@@ -500,9 +500,8 @@ const ENEMY_DEFS = {
   healer:  { hp:80,  speed:38,  reward:20, color:0x44ffaa, r:13, name:'Healer',  icon:'✚', heals:true },
   boss:    { hp:800, speed:20,  reward:80, color:0xff2222, r:22, name:'Boss',    icon:'👺' },
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
-  swarmer:   { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer',   icon:'🐝' },
-  phaseswarmer: { hp:25, speed:95,  reward:8,  color:0xaa44ff, r:7,  name:'Phase Swarmer', icon:'🌀' },
-  nimbus:    { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',    icon:'🛡️', shieldHp:60 },
+  swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
+  nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
 };
 
 // === POWER-UP DEFINITIONS ===
@@ -595,17 +594,33 @@ function getWaveEnemies(n) {
     const cnt = 3 + Math.floor(Math.random()*3);
     for (let i = 0; i < cnt; i++) list.push('swarmer');
   }
-  // Phase Swarmers: start wave 10, appear every 3rd wave (fast, phase in/out)
-  if (n >= 10 && n % 3 === 0) {
-    const cnt = 2 + Math.floor(Math.random()*3);
-    for (let i = 0; i < cnt; i++) list.push('phaseswarmer');
-  }
   // Nimbus shielded enemies: start wave 10, every 4th wave
   if (n >= 10 && (n - 10) % 4 === 0) {
     const cnt = 1 + Math.floor(Math.random()*2);
     for (let i = 0; i < cnt; i++) list.push('nimbus');
   }
-  if (n % 5 === 0 && n > 0) list.push('boss');
+  // Survival waves (26-30): escalating difficulty with all enemy types
+  if (n >= 26) {
+    const survivalLevel = n - 25; // 1-5
+    const baseCount = 15 + survivalLevel * 5;
+    for (let i = 0; i < baseCount; i++) {
+      const m = i % 6;
+      if (m === 0) list.push('tank');
+      else if (m === 1) list.push('fast');
+      else if (m === 2 && n >= 14) list.push('phase');
+      else if (m === 3 && n >= 15) list.push('healer');
+      else list.push('normal');
+    }
+    // Every 2nd survival wave: boss
+    if (n % 2 === 0) list.push('boss');
+    // Every 3rd survival wave: nimbus
+    if (n % 3 === 0) {
+      const cnt = 1 + Math.floor(Math.random()*2);
+      for (let i = 0; i < cnt; i++) list.push('nimbus');
+    }
+  }
+  // Boss every 5th wave (base game)
+  if (n % 5 === 0 && n > 0 && n < 26) list.push('boss');
   return list;
 }
 
@@ -1400,24 +1415,6 @@ class GameScene extends Phaser.Scene {
         }
       }
 
-      // Phase Swarmer: phases in and out of visibility
-      if (e.type === 'phaseswarmer') {
-        e.phaseCheckTimer = (e.phaseCheckTimer || 0) + dt;
-        if (e.phaseCheckTimer >= 1500) {
-          e.phaseCheckTimer = 0;
-          e.phased = !e.phased;
-          if (e.phased) {
-            e.sp.setAlpha(0.2);
-            this._particles(e.x, e.y, 0xaa44ff, 5, 30);
-          } else {
-            e.sp.setAlpha(1);
-            this._particles(e.x, e.y, 0xaa44ff, 5, 30);
-          }
-        }
-        // Phase swarmers can't be targeted when phased
-        if (e.phased) continue;
-      }
-      
       // Swarmer trail
       if (e.type === 'swarmer' && Math.random() < 0.3) {
         this._particles(e.x, e.y, 0xffff44, 1, 15);
@@ -1586,6 +1583,13 @@ class GameScene extends Phaser.Scene {
       this._updateHUD();
       document.getElementById('startWave').style.display = '';
       if (this.wave >= TOTAL_WAVES) { this._win(); }
+      else if (this.wave >= 25) {
+        // Between wave 25 and 30: show survival wave notification
+        const survNum = this.wave - 25;
+        this._floatText(MAP_W/2, MAP_H/2-20, `SURVIVAL WAVE ${survNum}!`, '#ff8844');
+        this.autoStartTimer = 5000;
+        document.getElementById('countdown').style.display = 'block';
+      }
       else {
         // Auto-start countdown
         this.autoStartTimer = 5000;
@@ -2023,9 +2027,17 @@ class GameScene extends Phaser.Scene {
   }
   _gameOver() {
     this.gameOver = true;
+    const isSurvival = this.wave >= 26;
     document.getElementById('finalWave').textContent = this.wave;
     document.getElementById('finalTowers').textContent = this.towersBuilt;
     document.getElementById('finalKills').textContent = this.enemiesKilled;
+    
+    // Update game over screen title based on whether they reached survival waves
+    const goTitle = document.querySelector('#gameOverScreen h1');
+    if (goTitle) {
+      goTitle.textContent = isSurvival ? 'SURVIVAL FAILED' : 'GAME OVER';
+    }
+    
     const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
     const bestEl = document.getElementById('finalBest');
     if (bestEl) {
@@ -2037,9 +2049,25 @@ class GameScene extends Phaser.Scene {
   }
   _win() {
     this.gameOver = true;
+    const survivedAll = this.wave >= 30;
     document.getElementById('winTowers').textContent = this.towersBuilt;
     document.getElementById('winKills').textContent = this.enemiesKilled;
     document.getElementById('winLives').textContent = this.lives;
+    
+    // Update win screen based on whether they completed survival waves
+    const winTitle = document.querySelector('#winScreen h1');
+    if (winTitle) {
+      winTitle.textContent = survivedAll ? '🏆 VICTORY - ALL 30 WAVES!' : '🏆 VICTORY!';
+    }
+    const winStats = document.querySelector('#winScreen .stats');
+    if (winStats) {
+      winStats.innerHTML = survivedAll 
+        ? 'All 30 Waves Cleared!<br>'
+        : 'All 25 Waves Cleared!<br>';
+      winStats.innerHTML += `Towers: <span id="winTowers">${this.towersBuilt}</span> · Kills: <span id="winKills">${this.enemiesKilled}</span><br>`;
+      winStats.innerHTML += `Lives Left: <span id="winLives">${this.lives}</span>`;
+    }
+    
     const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
     const bestEl = document.getElementById('winBest');
     if (bestEl) {
