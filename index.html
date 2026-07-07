@@ -428,26 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Dynamic full-screen grid calculation
-let COLS, ROWS, CELL, MAP_W, MAP_H;
-function calcGrid() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  // Reserve ~80px for HUD (top + bottom panels)
-  const gameH = vh - 80;
-  const gameW = vw;
-  // Target cell size ~45px, fit as many as possible
-  CELL = 45;
-  COLS = Math.floor(gameW / CELL);
-  ROWS = Math.floor(gameH / CELL);
-  // Ensure minimum playable grid
-  COLS = Math.max(10, Math.min(20, COLS));
-  ROWS = Math.max(14, Math.min(22, ROWS));
-  MAP_W = COLS * CELL;
-  MAP_H = ROWS * CELL;
-}
-calcGrid();
-const TOTAL_WAVES = 40;
+const COLS = 12, ROWS = 16, CELL = 48;
+const MAP_W = COLS * CELL, MAP_H = ROWS * CELL;
+const TOTAL_WAVES = 25;
 
 // === TOWER DEFINITIONS ===
 const TOWER_DEFS = {
@@ -458,8 +441,6 @@ const TOWER_DEFS = {
   sniper:    { name:'Sniper',  icon:'🎯', cost:175, dmg:75,  range:200, fireRate:2200, color:0xff44aa, pCol:0xff44aa, type:'single',  pSpeed:600 },
   laser:     { name:'Laser',   icon:'💎', cost:250, dmg:30,  range:130, fireRate:100,  color:0x66ffff, pCol:0x66ffff, type:'beam',    pSpeed:0,   beamW:2 },
   rocket:    { name:'Rocket',  icon:'🚀', cost:280, dmg:65,  range:160, fireRate:2500, color:0xffaa44, pCol:0xffaa44, type:'homing',  pSpeed:150, aoeR:45 },
-  mine:      { name:'Mine',    icon:'💣', cost:150,  dmg:80,  range:60,  fireRate:0,    color:0xff8844, pCol:0xff8844, type:'mine',    pSpeed:0,   armTime:2000 },
-  support:   { name:'Support', icon:'✨', cost:300,  dmg:0,   range:150, fireRate:0,    color:0xddaa44, pCol:0xddaa44, type:'support', buffDmg:1.3, buffRange:1.2 },
 };
 
 // === ENEMY DEFINITIONS ===
@@ -472,9 +453,6 @@ const ENEMY_DEFS = {
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
   swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
   nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
-  tele:    { hp:40,  speed:45,  reward:18, color:0xff44ff, r:11, name:'Teleport',icon:'🌀', teleports:true },
-  drone:   { hp:25,  speed:90,  reward:8,  color:0xff8800, r:8,  name:'Drone',   icon:'🤖' },
-  siege:   { hp:300, speed:18,  reward:35, color:0x888888, r:18, name:'Siege',   icon:'⚙️', siege:true },
 };
 
 // === POWER-UP DEFINITIONS ===
@@ -484,7 +462,6 @@ const POWERUPS = {
   nova:   { icon:'⚡', name:'Chain Nova', dur:12000, oneShot:false, cls:'pu-nova' },
   meteor: { icon:'☄️', name:'Meteor',     dur:0,     oneShot:true,  cls:'pu-meteor' },
   decay:  { icon:'💀', name:'Decay',      dur:0,     oneShot:true,  cls:'pu-decay' },
-  freeze: { icon:'⏸️', name:'Time Freeze',dur:5000,  oneShot:false, cls:'pu-freeze' },
 };
 const POWERUP_KEYS = Object.keys(POWERUPS);
 
@@ -530,34 +507,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Dynamic path generation based on grid size
-function generatePath() {
-  const midRow = Math.floor(ROWS / 2);
-  const endRow = Math.floor(ROWS * 0.85);
-  const waypoints = [
-    {x:0, y:midRow},
-  ];
-  
-  // Generate a winding path from left to right
-  let curX = 0, curY = midRow;
-  const segments = Math.floor(Math.random() * 3) + 4; // 4-6 segments
-  
-  for (let i = 0; i < segments; i++) {
-    const nextX = Math.floor(Math.random() * (COLS - 4)) + 2;
-    const nextY = Math.floor(Math.random() * (ROWS - 4)) + 1;
-    waypoints.push({x: nextX, y: nextY});
-    curX = nextX;
-    curY = nextY;
-  }
-  
-  // End near the right edge, bottom area
-  waypoints.push({x: COLS - 1, y: endRow});
-  
-  return waypoints;
-}
-
-// === PATH WAYPOINTS (dynamic) ===
-let PATH_POINTS = generatePath();
+// === PATH WAYPOINTS ===
+const PATH_POINTS = [
+  {x:0, y:14}, {x:3, y:14}, {x:3, y:7}, {x:7, y:7}, {x:7, y:3},
+  {x:10,y:3},  {x:10,y:10},{x:5, y:10},{x:5, y:12},{x:1, y:12},
+  {x:1, y:8},  {x:0, y:5},
+];
 const PATH = PATH_POINTS.map(p => ({x: p.x*CELL+CELL/2, y: p.y*CELL+CELL/2}));
 const pDist = [0];
 for (let i = 1; i < PATH.length; i++) {
@@ -595,22 +550,6 @@ function getWaveEnemies(n) {
     const cnt = 1 + Math.floor(Math.random()*2);
     for (let i = 0; i < cnt; i++) list.push('nimbus');
   }
-  // Teleporters: start wave 15, appear every 5th wave
-  if (n >= 15 && n % 5 === 0) {
-    const cnt = 2 + Math.floor(Math.random()*3);
-    for (let i = 0; i < cnt; i++) list.push('tele');
-  }
-  // Drones: start wave 20, appear frequently
-  if (n >= 20) {
-    const cnt = Math.floor(n / 5);
-    for (let i = 0; i < cnt; i++) list.push('drone');
-  }
-  // Siege enemies: start wave 25, appear every 3rd wave
-  if (n >= 25 && n % 3 === 0) {
-    const cnt = 1 + Math.floor(Math.random()*2);
-    for (let i = 0; i < cnt; i++) list.push('siege');
-  }
-  // Boss every 5th wave
   if (n % 5 === 0 && n > 0) list.push('boss');
   return list;
 }
@@ -893,16 +832,6 @@ class GameScene extends Phaser.Scene {
     g.lineStyle(3, 0xffffff, 1); g.strokeCircle(40,40,38);
     g.generateTexture('ring', 80, 80);
 
-    // Freeze overlay texture
-    g.clear();
-    g.fillStyle(0x44ddff, 0.3); g.fillCircle(200,200,200);
-    g.generateTexture('freeze_overlay', 400, 400);
-
-    // Freeze overlay texture
-    g.clear();
-    g.fillStyle(0x44ddff, 0.3); g.fillCircle(200,200,200);
-    g.generateTexture('freeze_overlay', 400, 400);
-
     // Power-up icon backdrops (using sparks tinted)
     g.clear();
     g.fillStyle(0xffffff, 1); g.fillCircle(10,10,9);
@@ -1008,16 +937,6 @@ class GameScene extends Phaser.Scene {
         this.grid[row][col] = cell;
       }
     }
-  }
-  
-  // Dynamic path cell check for variable grid
-  isPathCellDynamic(col, row) {
-    for (let i = 0; i < PATH_POINTS.length-1; i++) {
-      const a = PATH_POINTS[i], b = PATH_POINTS[i+1];
-      if (a.x === b.x && col === a.x && row >= Math.min(a.y,b.y) && row <= Math.max(a.y,b.y)) return true;
-      if (a.y === b.y && row === a.y && col >= Math.min(a.x,b.x) && col <= Math.max(a.x,b.x)) return true;
-    }
-    return false;
   }
 
   createUI() {
@@ -1348,83 +1267,6 @@ class GameScene extends Phaser.Scene {
         this._particles(e.x, e.y, 0xffff44, 1, 15);
       }
 
-      // Teleporter: randomly teleport to a new position on the path
-      if (e.type === 'tele' && e.teleports) {
-        e.teleTimer = (e.teleTimer || 0) + dt;
-        if (e.teleTimer >= 3000) {
-          e.teleTimer = 0;
-          // Teleport to a random point on the path (but not too close to start)
-          const newDist = Math.max(e.distance + 50, Math.min(PATH_LEN - 20, e.distance + 100 + Math.random() * 100));
-          const pos = posOnPath(newDist);
-          this._particles(e.x, e.y, 0xff44ff, 10, 40);
-          e.x = pos.x; e.y = pos.y;
-          e.distance = newDist;
-          this._particles(e.x, e.y, 0xff44ff, 10, 40);
-          this._floatText(e.x, e.y - e.radius - 15, 'TELEPORT!', '#ff44ff');
-        }
-      }
-
-      // Drone: fast but fragile, tries to reach core
-      if (e.type === 'drone') {
-        // Drones move 50% faster
-        const move = e.speed * 1.5 * (dt/1000);
-        e.distance += move;
-        const pos = posOnPath(e.distance);
-        e.x = pos.x; e.y = pos.y;
-        e.sp.setPosition(e.x, e.y);
-        e._updateHpBar();
-        // Skip the normal movement code for drones
-        if (e.distance >= PATH_LEN) {
-          e.alive = false;
-          e.sp.destroy();
-          e.hbBg.destroy(); e.hbFill.destroy();
-          this.enemies.splice(i,1);
-          this.enemiesRemaining--;
-          this.lives--;
-          this.redrawCoreBar();
-          this._updateHUD();
-          if (this.lives <= 0) { this._gameOver(); return; }
-          this._checkWaveClear();
-          continue;
-        }
-        if (e.hp <= 0 && e.alive) this._killEnemy(e, i);
-        continue;
-      }
-
-      // Siege: slow but massive HP, damages towers in range
-      if (e.type === 'siege') {
-        e.siegeAttackTimer = (e.siegeAttackTimer || 0) + dt;
-        if (e.siegeAttackTimer >= 4000) {
-          e.siegeAttackTimer = 0;
-          // Attack nearest tower
-          let nearestTower = null, bestD = Infinity;
-          this.towers.forEach(t => {
-            const d = Phaser.Math.Distance.Between(e.x, e.y, t.x, t.y);
-            if (d < 150 && d < bestD) { bestD = d; nearestTower = t; }
-          });
-          if (nearestTower) {
-            SFX.explosion();
-            this._particles(nearestTower.x, nearestTower.y, 0x888888, 15, 80);
-            this.cameras.main.shake(100, 0.005);
-            // Damage the tower (reduce its effective damage)
-            nearestTower.hitCount = (nearestTower.hitCount || 0) + 1;
-            if (nearestTower.hitCount >= 3) {
-              // Destroy the tower
-              if (nearestTower.body) nearestTower.body.destroy();
-              if (nearestTower.turret) nearestTower.turret.destroy();
-              if (nearestTower.rangeSprite) nearestTower.rangeSprite.destroy();
-              if (nearestTower.beam) { nearestTower.beam.destroy(); nearestTower.beam = null; }
-              if (nearestTower.mine) nearestTower.mine.destroy();
-              this.grid[nearestTower.row][nearestTower.col]._tower = null;
-              this.towers = this.towers.filter(t => t !== nearestTower);
-              this._floatText(nearestTower.x, nearestTower.y - 20, 'DESTROYED!', '#ff4444');
-            } else {
-              this._floatText(nearestTower.x, nearestTower.y - 20, `HIT! (${nearestTower.hitCount}/3)`, '#888888');
-            }
-          }
-        }
-      }
-
       // Healer
       if (e.heals) {
         e.healTimer += dt;
@@ -1458,21 +1300,9 @@ class GameScene extends Phaser.Scene {
         }
       }
 
-      // Move (check for time freeze)
-      let isFrozen = false;
-      if (this.activePowers.freeze && this.activePowers.freeze > this.time.now) {
-        isFrozen = true;
-        e.sp.setTint(0x44ddff);
-        e.sp.setAlpha(0.6);
-      } else {
-        e.sp.clearTint();
-        e.sp.setAlpha(1);
-      }
-      
-      if (!isFrozen) {
-        const move = e.speed * e.slowFactor * (dt/1000);
-        e.distance += move;
-      }
+      // Move
+      const move = e.speed * e.slowFactor * (dt/1000);
+      e.distance += move;
       const pos = posOnPath(e.distance);
       e.x = pos.x; e.y = pos.y;
       e.sp.setPosition(e.x, e.y);
@@ -1621,60 +1451,14 @@ class GameScene extends Phaser.Scene {
         return;
       }
 
-      const effectiveFR = tower.fireRate * rapidMul / this.gameRange;
+      const effectiveFR = tower.fireRate * rapidMul / this.gameSpeed;
       if (now < tower.lastFire + effectiveFR) return;
-
-      // Mine tower: check if armed, then explode near enemies
-      if (tower.type === 'mine') {
-        if (!tower.minePlaced) return;
-        tower.mineTimer += dt;
-        if (tower.mineArmTime > 0 && tower.mineTimer < tower.mineArmTime) return;
-        // Find nearest enemy
-        let nearest = null, bestD = Infinity;
-        for (const e of this.enemies) {
-          if (!e.alive) continue;
-          const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
-          if (d < tower.range && d < bestD) { bestD = d; nearest = e; }
-        }
-        if (nearest) {
-          // Explode mine
-          SFX.explosion();
-          this.cameras.main.shake(200, 0.008);
-          const ring = this.add.image(tower.x, tower.y, 'ring').setDepth(6).setTint(tower.color).setScale(0.1);
-          this.tweens.add({ targets: ring, scale: tower.range / 40, alpha: 0, duration: 500, ease: 'Power2', onComplete: () => ring.destroy() });
-          this._particles(tower.x, tower.y, tower.color, 20, 100);
-          this.enemies.forEach(e => {
-            if (!e.alive) return;
-            if (Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y) <= tower.range) {
-              this._hit(e, tower.damage, 'mine');
-            }
-          });
-          // Remove mine
-          if (tower.mine) tower.mine.destroy();
-          tower.minePlaced = false;
-          tower.mine = null;
-        }
-        return;
-      }
-      
-      // Support tower: continuously buff nearby towers
-      if (tower.type === 'support') {
-        // Visual pulse every 2 seconds
-        tower.supportPulse = (tower.supportPulse || 0) + dt;
-        if (tower.supportPulse >= 2000) {
-          tower.supportPulse = 0;
-          const pulse = this.add.circle(tower.x, tower.y, tower.range, tower.color, 0.05);
-          this.tweens.add({ targets: pulse, scale: 1.3, alpha: 0, duration: 1000, onComplete: () => pulse.destroy() });
-        }
-        return;
-      }
 
       let best = null, bestProg = -1;
       for (const e of this.enemies) {
         if (!e.alive || e.phased) continue;
         const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
-        const effectiveRange = tower.range * (tower.buffRangeMul || 1);
-        if (d <= effectiveRange && e.distance > bestProg) { bestProg = e.distance; best = e; }
+        if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
       }
       if (!best) {
         if (this.selectedTower === tower) this._showRange(tower);
@@ -1731,37 +1515,6 @@ class GameScene extends Phaser.Scene {
 
   _fire(tower, target) {
     SFX.shoot(tower.key);
-    
-    // Mine tower: place a mine instead of firing
-    if (tower.type === 'mine') {
-      if (tower.minePlaced) return; // Already placed
-      const mine = this.add.image(tower.x, tower.y, 'spark').setDepth(4).setTint(tower.color).setScale(0.8);
-      this.tweens.add({ targets: mine, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
-      tower.mine = mine;
-      tower.minePlaced = true;
-      tower.mineTimer = 0;
-      tower.mineArmTime = tower.armTime || 2000;
-      this._floatText(tower.x, tower.y - 20, 'ARMING...', '#ff8844');
-      return;
-    }
-    
-    // Support tower: buff nearby towers instead of firing
-    if (tower.type === 'support') {
-      this.towers.forEach(t => {
-        if (t === tower) return;
-        const d = Phaser.Math.Distance.Between(tower.x, tower.y, t.x, t.y);
-        if (d <= tower.range) {
-          t.buffed = true;
-          t.buffDmgMul = (t.buffDmgMul || 1) * (tower.buffDmg || 1.3);
-          t.buffRangeMul = (t.buffRangeMul || 1) * (tower.buffRange || 1.2);
-        }
-      });
-      // Visual pulse
-      const pulse = this.add.circle(tower.x, tower.y, tower.range, tower.color, 0.1);
-      this.tweens.add({ targets: pulse, scale: 1.5, alpha: 0, duration: 1000, onComplete: () => pulse.destroy() });
-      return;
-    }
-    
     const proj = this.add.image(tower.x, tower.y, tower.pTex).setDepth(4);
     this.projectiles.push({
       sp:proj, x:tower.x, y:tower.y, target,
@@ -2056,18 +1809,6 @@ class GameScene extends Phaser.Scene {
         });
         this._floatText(MAP_W/2, MAP_H/2, '💀 DECAY!', '#aa66ff');
         break;
-      case 'freeze':
-        this.activePowers.freeze = this.time.now + def.dur;
-        // Freeze all enemies in place
-        this.enemies.forEach(e => {
-          if (!e.alive) return;
-          this._particles(e.x, e.y, 0x44ddff, 5, 35);
-        });
-        // Visual freeze effect on screen
-        const freezeOverlay = this.add.rectangle(MAP_W/2, MAP_H/2, MAP_W, MAP_H, 0x44ddff, 0.15).setDepth(100).setAlpha(0.3);
-        this.tweens.add({ targets: freezeOverlay, alpha: 0, duration: def.dur, onComplete: () => freezeOverlay.destroy() });
-        this._floatText(MAP_W/2, MAP_H/2, '⏸️ TIME FREEZE!', '#44ddff');
-        break;
     }
     this._renderInventory();
   }
@@ -2258,34 +1999,18 @@ class GameScene extends Phaser.Scene {
 
 const config = {
   type: Phaser.AUTO,
+  width: MAP_W, height: MAP_H,
   backgroundColor: '#0a0a1a',
   scale: {
-    mode: Phaser.Scale.RESIZE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    setMinMax: [360, 480, MAP_W, MAP_H],
   },
   parent: 'phaserWrap',
   physics: { default:'arcade', arcade:{debug:false} },
   scene:[GameScene],
   render:{antialias:true, pixelArt:false},
 };
-
-// Handle window resize - recalculate grid and path
-window.addEventListener('resize', () => {
-  calcGrid();
-  PATH_POINTS = generatePath();
-  // Recalculate path waypoints and distance
-  PATH = PATH_POINTS.map(p => ({x: p.x*CELL+CELL/2, y: p.y*CELL+CELL/2}));
-  pDist.length = 0;
-  for (let i = 1; i < PATH.length; i++) {
-    const dx = PATH[i].x-PATH[i-1].x, dy = PATH[i].y-PATH[i-1].y;
-    pDist.push(pDist[i-1]+Math.sqrt(dx*dx+dy*dy));
-  }
-  PATH_LEN = pDist[pDist.length-1];
-  // Restart game scene on resize to apply new grid
-  if (window._gameScene) {
-    window._gameScene.scene.restart();
-  }
-});
 
 const game = new Phaser.Game(config);
 </script>
