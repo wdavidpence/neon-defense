@@ -646,7 +646,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x1a3322); g.fillCircle(20,20,3);
     g.fillStyle(0x44ff88); g.fillRect(18,2,4,14);
     g.fillStyle(0x44ff88, 0.18); g.fillCircle(20,20,22);
-    g.generateTexture('t_archer',40,40);
+    g.generateTexture('t_archer', CELL-2, CELL-2);
 
     // Cannon
     g.clear();
@@ -656,7 +656,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x331111); g.fillCircle(21,21,5);
     g.fillStyle(0xff6644); g.fillCircle(21,21,2);
     g.fillStyle(0xff6644, 0.16); g.fillCircle(21,21,24);
-    g.generateTexture('t_cannon',42,42);
+    g.generateTexture('t_cannon', CELL, CELL);
 
     // Ice
     g.clear();
@@ -665,7 +665,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x44ddff); g.fillRect(16,4,8,32); g.fillRect(4,16,32,8);
     g.fillStyle(0xffffff, 0.3); g.fillRect(18,8,4,4); g.fillRect(8,18,4,4);
     g.fillStyle(0x44ddff, 0.16); g.fillCircle(20,20,22);
-    g.generateTexture('t_ice',40,40);
+    g.generateTexture('t_ice', CELL-2, CELL-2);
 
     // Lightning
     g.clear();
@@ -676,7 +676,7 @@ class GameScene extends Phaser.Scene {
     g.lineBetween(20,12,14,18); g.lineBetween(20,12,26,18);
     g.lineBetween(20,28,14,22); g.lineBetween(20,28,26,22);
     g.fillStyle(0xffdd44, 0.16); g.fillCircle(20,20,22);
-    g.generateTexture('t_lightning',40,40);
+    g.generateTexture('t_lightning', CELL-2, CELL-2);
 
     // Sniper
     g.clear();
@@ -686,7 +686,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x220022); g.fillCircle(20,20,3);
     g.lineStyle(3, 0xff44aa); g.lineBetween(20,20,20,2);
     g.fillStyle(0xff44aa, 0.16); g.fillCircle(20,20,22);
-    g.generateTexture('t_sniper',40,40);
+    g.generateTexture('t_sniper', CELL-2, CELL-2);
 
     // Laser
     g.clear();
@@ -696,7 +696,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xffffff); g.fillCircle(20,20,3);
     g.fillStyle(0x66ffff); g.fillRect(18,4,4,12);
     g.fillStyle(0x66ffff, 0.18); g.fillCircle(20,20,22);
-    g.generateTexture('t_laser',40,40);
+    g.generateTexture('t_laser', CELL-2, CELL-2);
 
     // Rocket
     g.clear();
@@ -706,7 +706,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xff6644); g.fillRect(14,16,12,16);
     g.fillStyle(0xffdd88); g.fillCircle(20,22,3);
     g.fillStyle(0xffaa44, 0.18); g.fillCircle(20,20,22);
-    g.generateTexture('t_rocket',40,40);
+    g.generateTexture('t_rocket', CELL-2, CELL-2);
 
     // Enemy: Normal
     g.clear();
@@ -714,14 +714,14 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xff3366,0.6); g.fillCircle(12,12,8);
     g.fillStyle(0xffffff); g.fillCircle(8,9,3); g.fillCircle(16,9,3);
     g.fillStyle(0x330011); g.fillCircle(8,9,1.5); g.fillCircle(16,9,1.5);
-    g.generateTexture('e_normal',24,24);
+    g.generateTexture('e_normal', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
 
     // Enemy: Fast
     g.clear();
     g.fillStyle(0xffcc44,1); g.fillTriangle(12,2,2,22,22,22);
     g.fillStyle(0xff8800,0.7); g.fillTriangle(12,6,6,20,18,20);
     g.fillStyle(0xffffff, 0.4); g.fillCircle(14,10,3);
-    g.generateTexture('e_fast',24,24);
+    g.generateTexture('e_fast', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
 
     // Enemy: Tank
     g.clear();
@@ -731,14 +731,14 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xffffff); g.fillCircle(12,12,4);
     g.fillStyle(0x8844ff); g.fillCircle(20,12,4);
     g.fillStyle(0x4422aa); g.fillRect(8,22,16,4);
-    g.generateTexture('e_tank',32,32);
+    g.generateTexture('e_tank', Math.floor(CELL*0.75), Math.floor(CELL*0.75));
 
     // Enemy: Healer
     g.clear();
     g.fillStyle(0x66ffcc,1); g.fillCircle(13,13,11);
     g.fillStyle(0x33ddaa,0.7); g.fillCircle(13,13,8);
     g.fillStyle(0xffffff); g.fillRect(9,3,8,4); g.fillRect(3,9,4,8);
-    g.generateTexture('e_healer',26,26);
+    g.generateTexture('e_healer', Math.floor(CELL*0.625), Math.floor(CELL*0.625));
 
     // Enemy: Boss
     g.clear();
@@ -750,7 +750,7 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x880000); g.fillRect(12,32,20,5);
     g.fillStyle(0xcc2222); g.fillTriangle(8,12,4,4,14,8);
     g.fillTriangle(36,12,40,4,30,8);
-    g.generateTexture('e_boss',44,44);
+    g.generateTexture('e_boss', Math.floor(CELL*1.05), Math.floor(CELL*1.05));
 
     // Enemy: Phase
     g.clear();
@@ -758,13 +758,13 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xddaaff,0.5); g.fillCircle(12,12,7);
     g.fillStyle(0xffffff,0.9); g.fillCircle(8,10,2); g.fillCircle(16,10,2);
     g.fillStyle(0x4422aa); g.fillCircle(12,14,2);
-    g.generateTexture('e_phase',24,24);
+    g.generateTexture('e_phase', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
 
     // Enemy: Swarmer
     g.clear();
     g.fillStyle(0xffff44,1); g.fillCircle(6,6,5);
     g.fillStyle(0xffffaa,0.6); g.fillCircle(6,6,7);
-    g.generateTexture('e_swarmer',14,14);
+    g.generateTexture('e_swarmer', Math.floor(CELL*0.33), Math.floor(CELL*0.33));
 
     // Enemy: Nimbus (shielded blue circle with white shield arc)
     g.clear();
@@ -775,41 +775,41 @@ class GameScene extends Phaser.Scene {
     // Outer shield arc
     g.lineStyle(2.5, 0xddeeff, 0.95); g.strokeCircle(15,15,14);
     g.lineStyle(1.5, 0xffffff, 0.6); g.strokeCircle(15,15,11);
-    g.generateTexture('e_nimbus',30,30);
+    g.generateTexture('e_nimbus', Math.floor(CELL*0.7), Math.floor(CELL*0.7));
 
     // Projectiles
     g.clear();
     g.fillStyle(0x44ff88,1); g.fillCircle(4,4,4);
     g.fillStyle(0xaaffcc,0.5); g.fillCircle(4,4,6);
-    g.generateTexture('p_archer',8,8);
+    g.generateTexture('p_archer', Math.floor(CELL*0.2), Math.floor(CELL*0.2));
 
     g.clear();
     g.fillStyle(0xff6644,1); g.fillCircle(6,6,6);
     g.fillStyle(0xffaa88,0.5); g.fillCircle(6,6,9);
-    g.generateTexture('p_cannon',12,12);
+    g.generateTexture('p_cannon', Math.floor(CELL*0.28), Math.floor(CELL*0.28));
 
     g.clear();
     g.fillStyle(0x44ddff,1); g.fillCircle(5,5,5);
     g.fillStyle(0xaaffff,0.4); g.fillCircle(5,5,7);
-    g.generateTexture('p_ice',10,10);
+    g.generateTexture('p_ice', Math.floor(CELL*0.24), Math.floor(CELL*0.24));
 
     g.clear();
     g.fillStyle(0xffdd44,1); g.fillCircle(5,5,5);
-    g.generateTexture('p_lightning',10,10);
+    g.generateTexture('p_lightning', Math.floor(CELL*0.24), Math.floor(CELL*0.24));
 
     g.clear();
     g.fillStyle(0xff44aa,1); g.fillRect(1,0,4,12);
     g.fillStyle(0xff88cc,0.5); g.fillRect(0,2,6,8);
-    g.generateTexture('p_sniper',6,12);
+    g.generateTexture('p_sniper', Math.floor(CELL*0.14), Math.floor(CELL*0.28));
 
     g.clear();
     g.fillStyle(0xffaa44,1); g.fillTriangle(5,0, 0,12, 10,12);
     g.fillStyle(0xff6644,1); g.fillRect(3,8,4,4);
-    g.generateTexture('p_rocket',10,14);
+    g.generateTexture('p_rocket', Math.floor(CELL*0.24), Math.floor(CELL*0.33));
 
     g.clear();
     g.fillStyle(0x66ffff,1); g.fillCircle(3,3,3);
-    g.generateTexture('p_laser',6,6);
+    g.generateTexture('p_laser', Math.floor(CELL*0.14), Math.floor(CELL*0.14));
 
     // Environment
     g.clear();
@@ -825,35 +825,35 @@ class GameScene extends Phaser.Scene {
     g.clear();
     g.fillStyle(0xffffff, 0.06); g.fillCircle(200,200,200);
     g.lineStyle(1, 0xffffff, 0.15); g.strokeCircle(200,200,200);
-    g.generateTexture('range', 400, 400);
+    g.generateTexture('range', Math.floor(CELL*9), Math.floor(CELL*9));
 
     g.clear();
     g.fillStyle(0x4488ff); g.fillCircle(24,24,20);
     g.fillStyle(0x88bbff); g.fillCircle(24,24,12);
     g.fillStyle(0xffffff); g.fillCircle(24,24,5);
     g.lineStyle(3, 0x66aaff); g.strokeCircle(24,24,20);
-    g.generateTexture('core', 48, 48);
+    g.generateTexture('core', Math.floor(CELL*1.15), Math.floor(CELL*1.15));
 
     g.clear();
     g.fillStyle(0xff3344, 0.7); g.fillCircle(16,16,14);
     g.lineStyle(2, 0xff6677); g.strokeCircle(16,16,14);
     g.fillStyle(0xffffff); g.fillCircle(16,16,4);
-    g.generateTexture('spawn', 32, 32);
+    g.generateTexture('spawn', Math.floor(CELL*0.75), Math.floor(CELL*0.75));
 
     g.clear();
     g.fillStyle(0xffffff,1); g.fillCircle(3,3,3);
-    g.generateTexture('spark', 6, 6);
+    g.generateTexture('spark', Math.floor(CELL*0.14), Math.floor(CELL*0.14));
 
     // Ring (for AOE explosion)
     g.clear();
     g.lineStyle(3, 0xffffff, 1); g.strokeCircle(40,40,38);
-    g.generateTexture('ring', 80, 80);
+    g.generateTexture('ring', Math.floor(CELL*1.9), Math.floor(CELL*1.9));
 
     // Power-up icon backdrops (using sparks tinted)
     g.clear();
     g.fillStyle(0xffffff, 1); g.fillCircle(10,10,9);
     g.fillStyle(0xffffff, 0.4); g.fillCircle(10,10,12);
-    g.generateTexture('pu_blob', 22, 22);
+    g.generateTexture('pu_blob', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
     g.destroy();
   }
 
