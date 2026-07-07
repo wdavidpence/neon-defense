@@ -2002,12 +2002,47 @@ class GameScene extends Phaser.Scene {
   _updateWavePreview() {
     const el = document.getElementById('wavePreview');
     if (this.waveActive || this.wave >= TOTAL_WAVES) { el.style.display = 'none'; return; }
+    
     const next = getWaveEnemies(this.wave + 1);
     const counts = {};
     next.forEach(t => counts[t] = (counts[t]||0) + 1);
-    el.innerHTML = '<span style="color:#88ddff;font-size:9px;font-weight:700;">NEXT:</span>' +
-      Object.entries(counts).map(([t,c]) => `<span title="${ENEMY_DEFS[t].name} x${c}">${ENEMY_DEFS[t].icon}${c>1?c:''}</span>`).join('');
-    el.style.display = 'flex';
+    
+    // Calculate total HP for the wave (player can gauge difficulty)
+    let totalHp = 0;
+    let totalReward = 0;
+    Object.entries(counts).forEach(([type, count]) => {
+      const def = ENEMY_DEFS[type];
+      const hp = getEnemyHp(this.wave + 1, type);
+      totalHp += hp * count;
+      totalReward += def.reward * count;
+    });
+    
+    // Build detailed preview with enemy names, icons, HP, and gold reward
+    let previewHtml = '<span style="color:#88ddff;font-size:8px;font-weight:700;">NEXT WAVE:</span><br>';
+    previewHtml += '<span style="color:#aab;font-size:7px;">';
+    
+    Object.entries(counts).forEach(([type, count]) => {
+      const def = ENEMY_DEFS[type];
+      const hp = getEnemyHp(this.wave + 1, type);
+      const hpBar = Math.min(100, Math.floor(hp / 10)); // Scale HP to 0-100 for visual
+      const barColor = hp > 100 ? '#ff4444' : hp > 50 ? '#ffaa22' : '#44ff88';
+      
+      previewHtml += `<div style="display:flex;align-items:center;gap:2px;margin:1px 0;">
+        <span style="font-size:10px;">${def.icon}</span>
+        <span style="color:${barColor};font-size:7px;font-weight:600;">${def.name}</span>
+        <span style="color:#888;font-size:6px;">x${count}</span>
+        <span style="color:#888;font-size:6px;">HP${hp}</span>
+        <span style="color:#ffcc00;font-size:6px;">💰${def.reward * count}</span>
+      </div>`;
+    });
+    
+    previewHtml += `</span>`;
+    previewHtml += `<div style="color:#88ddff;font-size:7px;font-weight:700;margin-top:2px;">`;
+    previewHtml += `Total: ${next.length} enemies · ${totalHp} HP · 💰${totalReward}`;
+    previewHtml += `</div>`;
+    
+    el.innerHTML = previewHtml;
+    el.style.display = 'block';
   }
 
   _updateHUD() {
