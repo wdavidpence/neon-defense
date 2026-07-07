@@ -487,6 +487,7 @@ const TOWER_DEFS = {
   cannon:    { name:'Cannon',  icon:'💥', cost:130, dmg:50,  range:100, fireRate:1800, color:0xff6644, pCol:0xff6644, type:'aoe',     pSpeed:200, aoeR:55 },
   ice:       { name:'Cryo',    icon:'❄️', cost:100, dmg:10,  range:120, fireRate:1100, color:0x44ddff, pCol:0x44ddff, type:'slow',    pSpeed:300, slowF:0.35, slowD:2500 },
   lightning: { name:'Tesla',   icon:'⚡', cost:200, dmg:28,  range:140, fireRate:1300, color:0xffdd44, pCol:0xffdd44, type:'chain',   pSpeed:600, chainN:3, chainR:90 },
+  teslac:   { name:'Tesla Coil', icon:'🔋', cost:300, dmg:35,  range:120, fireRate:1500, color:0x4488ff, pCol:0x4488ff, type:'tesla',   pSpeed:0,   chainN:5, chainR:100, arcCount:3 },
   sniper:    { name:'Sniper',  icon:'🎯', cost:175, dmg:75,  range:200, fireRate:2200, color:0xff44aa, pCol:0xff44aa, type:'single',  pSpeed:600 },
   laser:     { name:'Laser',   icon:'💎', cost:250, dmg:30,  range:130, fireRate:100,  color:0x66ffff, pCol:0x66ffff, type:'beam',    pSpeed:0,   beamW:2 },
   rocket:    { name:'Rocket',  icon:'🚀', cost:280, dmg:65,  range:160, fireRate:2500, color:0xffaa44, pCol:0xffaa44, type:'homing',  pSpeed:150, aoeR:45 },
@@ -502,7 +503,6 @@ const ENEMY_DEFS = {
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
   swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
   nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
-  titan:   { hp:500, speed:14,  reward:50, color:0x8844aa, r:20, name:'Titan',   icon:'👑', regShield:true, shieldMax:200, shieldRegen:2 },
 };
 
 // === POWER-UP DEFINITIONS ===
@@ -594,11 +594,6 @@ function getWaveEnemies(n) {
   if (n >= 7 && n % 3 === 0) {
     const cnt = 3 + Math.floor(Math.random()*3);
     for (let i = 0; i < cnt; i++) list.push('swarmer');
-  }
-  // Shielded Titans: start wave 15, appear every 5th wave (high priority enemies)
-  if (n >= 15 && n % 5 === 0) {
-    const cnt = 1 + Math.floor(Math.random()*2);
-    for (let i = 0; i < cnt; i++) list.push('titan');
   }
   // Nimbus shielded enemies: start wave 10, every 4th wave
   if (n >= 10 && (n - 10) % 4 === 0) {
@@ -1323,9 +1318,8 @@ class GameScene extends Phaser.Scene {
     const hbBg = this.add.graphics().setDepth(5);
     const hbFill = this.add.graphics().setDepth(6);
 
-    // Shield scales with wave
-    const shieldMax = def.shieldMax ? Math.floor(def.shieldMax * (1 + (this.wave-1) * 0.08)) : 0;
-    const shieldRegen = def.shieldRegen ? def.shieldRegen : 0;
+    // Nimbus shield scales with wave
+    const shieldMax = def.shieldHp ? Math.floor(def.shieldHp * (1 + (this.wave-1) * 0.08)) : 0;
 
     const enemy = {
       type, sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
@@ -1337,8 +1331,8 @@ class GameScene extends Phaser.Scene {
       phased:false, phaseTimer:0, phaseCheck:0,
       // Boss
       isBoss:(type==='boss'), bossBurstTimer:0, bossSpawnTimer:0,
-      // Shielded Titan
-      regShield:def.regShield||false, shieldMax:shieldMax, shieldHp:shieldMax, shieldRegen:shieldRegen, shieldRegenTimer:0,
+      // Shield
+      shieldHp: shieldMax, shieldMax,
     };
     enemy._updateHpBar = () => {
       const bx = enemy.x-12, by = enemy.y-enemy.radius-8, bw = 24, bh = 3;
@@ -1423,22 +1417,6 @@ class GameScene extends Phaser.Scene {
         }
       }
 
-      // Shielded Titan regeneration
-      if (e.regShield) {
-        e.shieldRegenTimer = (e.shieldRegenTimer || 0) + dt;
-        if (e.shieldRegenTimer >= 2000 && e.shieldMax > 0) { // Regen every 2 seconds
-          e.shieldRegenTimer = 0;
-          const regenAmount = e.shieldRegen || 2;
-          const oldShield = e.shieldHp;
-          e.shieldHp = Math.min(e.shieldMax, e.shieldHp + regenAmount);
-          if (e.shieldHp > oldShield) {
-            // Visual feedback for shield regen
-            this._particles(e.x, e.y, 0x8844aa, 3, 25);
-            this._floatText(e.x, e.y - e.radius - 12, `+${e.shieldHp - oldShield} SHIELD`, '#8844aa');
-          }
-        }
-      }
-      
       // Boss abilities
       if (e.isBoss) {
         e.bossBurstTimer += dt;
@@ -1609,6 +1587,12 @@ class GameScene extends Phaser.Scene {
       const effectiveFR = tower.fireRate * rapidMul / this.gameSpeed;
       if (now < tower.lastFire + effectiveFR) return;
 
+      // Tesla Coil: special chain-lightning behavior
+      if (tower.type === 'tesla') {
+        this._fireTeslaCoil(tower);
+        return;
+      }
+
       let best = null, bestProg = -1;
       for (const e of this.enemies) {
         if (!e.alive || e.phased) continue;
@@ -1682,6 +1666,69 @@ class GameScene extends Phaser.Scene {
     const ang = Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y);
     this._particles(tower.x+Math.cos(ang)*15, tower.y+Math.sin(ang)*15,
                      TOWER_DEFS[tower.key].color, 3, 20);
+  }
+
+  _fireTeslaCoil(tower) {
+    // Tesla Coil: fires chain lightning that arcs between multiple enemies
+    let best = null, bestProg = -1;
+    for (const e of this.enemies) {
+      if (!e.alive || e.phased) continue;
+      const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
+      if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
+    }
+    if (!best) {
+      if (this.selectedTower === tower) this._showRange(tower);
+      return;
+    }
+
+    tower.lastFire = this.time.now;
+    tower.target = best;
+    
+    // Draw arc lightning to primary target
+    const chainN = tower.chainN || 5;
+    const chainR = tower.chainR || 100;
+    const arcCount = tower.arcCount || 3;
+    
+    SFX.shoot('lightning');
+    
+    // Arc to primary target
+    this._drawBolt(tower.x, tower.y, best.x, best.y, 0x4488ff);
+    this._hit(best, tower.damage, 'tesla');
+    this._particles(best.x, best.y, 0x4488ff, 5, 35);
+    
+    // Arc to secondary targets (chain lightning)
+    let lastTarget = best;
+    const chained = [best];
+    for (let i = 0; i < chainN; i++) {
+      let nextBest = null, nextBestD = chainR;
+      for (const e of this.enemies) {
+        if (!e.alive || chained.includes(e) || e === best) continue;
+        const d = Phaser.Math.Distance.Between(lastTarget.x, lastTarget.y, e.x, e.y);
+        if (d < nextBestD) { nextBestD = d; nextBest = e; }
+      }
+      if (!nextBest) break;
+      
+      chained.push(nextBest);
+      this._drawBolt(lastTarget.x, lastTarget.y, nextBest.x, nextBest.y, 0x4488ff);
+      this._hit(nextBest, Math.floor(tower.damage * 0.6), 'tesla');
+      this._particles(nextBest.x, nextBest.y, 0x4488ff, 4, 35);
+      lastTarget = nextBest;
+    }
+    
+    // Visual arc effect (multiple parallel bolts for visual density)
+    for (let a = 0; a < arcCount; a++) {
+      const offset = (Math.random() - 0.5) * 10;
+      const endX = best.x + (Math.random() - 0.5) * 15;
+      const endY = best.y + (Math.random() - 0.5) * 15;
+      this._drawBolt(
+        tower.x + (Math.random() - 0.5) * 10,
+        tower.y + (Math.random() - 0.5) * 10,
+        endX, endY, 0x88bbff
+      );
+    }
+    
+    // Camera shake for impact
+    this.cameras.main.shake(100, 0.004);
   }
 
   // ---------- PROJECTILES ----------
