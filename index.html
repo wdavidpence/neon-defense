@@ -1109,8 +1109,52 @@ class GameScene extends Phaser.Scene {
     if (t.aoeR) t.aoeR = Math.floor(d.aoeR * (1+(t.level-1)*0.18));
     if (t.beamW) t.beamW = d.beamW + (t.level-1);
 
-    this._particles(t.x, t.y, 0xffdd00, 14, 80);
-    this._floatText(t.x, t.y-25, `LV${t.level}`, '#ffdd00');
+    // Enhanced visual feedback: larger particle burst + level indicator on body
+    const partCount = 18 + t.level * 4;
+    this._particles(t.x, t.y, 0xffdd00, partCount, 90);
+    this._floatText(t.x, t.y - 25, `UPGRADE! LV${t.level}`, '#ffdd00');
+    
+    // Add level indicator text on the tower body (persistent)
+    if (t.levelText) t.levelText.destroy();
+    const levelText = this.add.text(t.x, t.y + CELL * 0.35, t.level.toString(), {
+      fontSize: Math.max(8, CELL * 0.22) + 'px',
+      fontFamily: 'Segoe UI,system-ui,sans-serif',
+      color: '#ffdd00',
+      stroke: '#000',
+      strokeThickness: 3,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(6);
+    t.levelText = levelText;
+    
+    // Pulsing glow ring around tower to draw attention
+    const glowRing = this.add.circle(t.x, t.y, t.range, d.color, 0.08).setDepth(2).setStrokeStyle(1, d.color, 0.3);
+    this.tweens.add({
+      targets: glowRing,
+      scale: 1.3,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => glowRing.destroy()
+    });
+    
+    // Scale bounce on tower body
+    this.tweens.add({
+      targets: t.body,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2'
+    });
+    this.tweens.add({
+      targets: t.turret,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2'
+    });
+    
     this._updateHUD();
     if (this.selectedTower === t) this._showTooltip(t, {x:t.x, y:t.y});
   }
