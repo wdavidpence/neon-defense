@@ -502,6 +502,7 @@ const ENEMY_DEFS = {
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
   swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
   nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
+  titan:   { hp:500, speed:14,  reward:50, color:0x8844aa, r:20, name:'Titan',   icon:'👑', regShield:true, shieldMax:200, shieldRegen:2 },
 };
 
 // === POWER-UP DEFINITIONS ===
@@ -593,6 +594,11 @@ function getWaveEnemies(n) {
   if (n >= 7 && n % 3 === 0) {
     const cnt = 3 + Math.floor(Math.random()*3);
     for (let i = 0; i < cnt; i++) list.push('swarmer');
+  }
+  // Shielded Titans: start wave 15, appear every 5th wave (high priority enemies)
+  if (n >= 15 && n % 5 === 0) {
+    const cnt = 1 + Math.floor(Math.random()*2);
+    for (let i = 0; i < cnt; i++) list.push('titan');
   }
   // Nimbus shielded enemies: start wave 10, every 4th wave
   if (n >= 10 && (n - 10) % 4 === 0) {
@@ -1317,8 +1323,9 @@ class GameScene extends Phaser.Scene {
     const hbBg = this.add.graphics().setDepth(5);
     const hbFill = this.add.graphics().setDepth(6);
 
-    // Nimbus shield scales with wave
-    const shieldMax = def.shieldHp ? Math.floor(def.shieldHp * (1 + (this.wave-1) * 0.08)) : 0;
+    // Shield scales with wave
+    const shieldMax = def.shieldMax ? Math.floor(def.shieldMax * (1 + (this.wave-1) * 0.08)) : 0;
+    const shieldRegen = def.shieldRegen ? def.shieldRegen : 0;
 
     const enemy = {
       type, sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
@@ -1330,8 +1337,8 @@ class GameScene extends Phaser.Scene {
       phased:false, phaseTimer:0, phaseCheck:0,
       // Boss
       isBoss:(type==='boss'), bossBurstTimer:0, bossSpawnTimer:0,
-      // Shield
-      shieldHp: shieldMax, shieldMax,
+      // Shielded Titan
+      regShield:def.regShield||false, shieldMax:shieldMax, shieldHp:shieldMax, shieldRegen:shieldRegen, shieldRegenTimer:0,
     };
     enemy._updateHpBar = () => {
       const bx = enemy.x-12, by = enemy.y-enemy.radius-8, bw = 24, bh = 3;
@@ -1416,6 +1423,22 @@ class GameScene extends Phaser.Scene {
         }
       }
 
+      // Shielded Titan regeneration
+      if (e.regShield) {
+        e.shieldRegenTimer = (e.shieldRegenTimer || 0) + dt;
+        if (e.shieldRegenTimer >= 2000 && e.shieldMax > 0) { // Regen every 2 seconds
+          e.shieldRegenTimer = 0;
+          const regenAmount = e.shieldRegen || 2;
+          const oldShield = e.shieldHp;
+          e.shieldHp = Math.min(e.shieldMax, e.shieldHp + regenAmount);
+          if (e.shieldHp > oldShield) {
+            // Visual feedback for shield regen
+            this._particles(e.x, e.y, 0x8844aa, 3, 25);
+            this._floatText(e.x, e.y - e.radius - 12, `+${e.shieldHp - oldShield} SHIELD`, '#8844aa');
+          }
+        }
+      }
+      
       // Boss abilities
       if (e.isBoss) {
         e.bossBurstTimer += dt;
