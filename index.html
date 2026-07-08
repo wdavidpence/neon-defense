@@ -372,7 +372,57 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btn) btn.addEventListener('click', () => {
     SFX.init();
     document.getElementById('startScreen').style.display = 'none';
-    // Retry _begin() until the Phaser scene is ready (handles slow load on mobile/Telegram WebView)
+    
+    // Check if Phaser failed to initialize (CDN error or scene never created)
+    const checkInitialization = () => {
+      if (window._gameScene && window._gameScene._begin) {
+        console.log('[NeonDefense] Scene ready, calling _begin()');
+        window._gameScene._begin();
+        return true;
+      }
+      
+      // Check if canvas exists but scene never initialized (after 10 seconds)
+      const cv = document.querySelector('canvas');
+      if (cv && !window._gameScene) {
+        const elapsed = Date.now() - window._initStartTime;
+        if (elapsed > 10000) {
+          console.error('[NeonDefense] Phaser scene failed to initialize after 10s');
+          // Show error state with retry option
+          const startScreen = document.getElementById('startScreen');
+          if (startScreen) {
+            startScreen.style.display = 'flex';
+            startScreen.innerHTML = `
+              <h1>NEON DEFENSE</h1>
+              <div class="subtitle">⚡ Game Failed to Load ⚡</div>
+              <p style="color:#ff4466; margin:20px 0; padding:15px; background:rgba(255,68,102,0.1); border-radius:8px;">
+                The game engine failed to initialize.<br>
+                Please try reloading the page.
+              </p>
+              <button id="retryBtn" style="padding:12px 24px; background:#00ff88; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                RELOAD PAGE
+              </button>
+            `;
+            document.getElementById('retryBtn').addEventListener('click', () => {
+              location.reload();
+            });
+          }
+          return false;
+        }
+      }
+      
+      // Continue retrying if canvas doesn't exist yet (Phaser still loading)
+      return false;
+    };
+    
+    // Start checking after 10 seconds (give Phaser time to initialize)
+    window._initStartTime = Date.now();
+    const initCheckInterval = setInterval(() => {
+      if (checkInitialization()) {
+        clearInterval(initCheckInterval);
+      }
+    }, 1000);
+    
+    // Also retry _begin() for slow initialization (up to 30s)
     function tryBegin(attempts) {
       if (window._gameScene && window._gameScene._begin) {
         console.log('[NeonDefense] Scene ready, calling _begin()');
