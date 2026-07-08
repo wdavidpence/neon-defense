@@ -250,8 +250,36 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; t
 </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"
+  onerror="window.PHASER_CDN_ERROR=true; console.error('[NeonDefense] Phaser CDN failed to load');">
+</script>
 <script>
+// =============== PHASER INITIALIZATION WITH ERROR HANDLING ===============
+
+// Check if Phaser loaded successfully
+if (typeof Phaser === 'undefined') {
+  console.error('[NeonDefense] Phaser library failed to load!');
+  window.PHASER_CDN_ERROR = true;
+}
+
+// Error handling for CDN failure
+if (window.PHASER_CDN_ERROR) {
+  document.getElementById('startScreen').innerHTML = `
+    <h1>NEON DEFENSE</h1>
+    <div class="subtitle">⚡ Error: Game Engine Failed to Load ⚡</div>
+    <p style="color:#ff4466; margin:20px 0; padding:15px; background:rgba(255,68,102,0.1); border-radius:8px;">
+      The game engine (Phaser) failed to load from the CDN.<br>
+      Please check your internet connection and try again.
+    </p>
+    <button id="retryBtn" style="padding:12px 24px; background:#00ff88; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+      RETRY LOADING
+    </button>
+  `;
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    location.reload();
+  });
+}
+
 // =============== SOUND MANAGER (Web Audio API) ===============
 const SFX = {
   ctx: null, vol: 0.3, muted: false, quality: 'high', // low, med, high
