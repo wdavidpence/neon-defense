@@ -564,7 +564,8 @@ function calcGrid() {
   MAP_H = ROWS * CELL;
 }
 calcGrid();
-const TOTAL_WAVES = 30; // 25 base + 5 survival waves
+// === STEP 16: Updated to 40 waves (30 base + 10 boss rush) ===
+TOTAL_WAVES = 40;
 
 // === TOWER DEFINITIONS ===
 const TOWER_DEFS = {
@@ -719,6 +720,160 @@ function getWaveEnemyTypes(wave) {
   return types;
 }
 
+// === STEP 16: Boss Rush mode (waves 31-40) — escalating boss difficulty ===
+function getBossRushWaveTypes(wave) {
+  const types = [];
+  // Each wave has 1-2 bosses + supporting enemies
+  const bossCount = wave <= 34 ? 1 : (wave <= 37 ? 2 : 2);
+  const supportCount = wave * 3;
+  for (let i = 0; i < supportCount; i++) {
+    const m = i % 4;
+    types.push(m === 0 ? 'tank' : m === 1 ? 'fast' : m === 2 ? 'phase' : 'normal');
+  }
+  for (let i = 0; i < bossCount; i++) types.push('boss');
+  // Add swarmers in later waves
+  if (wave >= 36) {
+    const cnt = wave - 34;
+    for (let i = 0; i < cnt * 2; i++) types.push('swarmer');
+  }
+  return types;
+}
+function isBossRushWave(wave) { return wave >= 31; }
+
+// === STEP 17: Tower research system — unlock variants after milestones ===
+const RESEARCH = {
+  archer_v2: { name:'Archer MkII', icon:'🏹', cost:100, dmg:25, range:140, fireRate:650, color:0x44ff88, pCol:0x44ff88, type:'single', pSpeed:420 },
+  cannon_v2: { name:'Cannon MkII', icon:'💥', cost:180, dmg:70, range:110, fireRate:1600, color:0xff6644, pCol:0xff6644, type:'aoe', pSpeed:220, aoeR:65 },
+  ice_v2:    { name:'Cryo MkII', icon:'❄️', cost:140, dmg:15, range:130, fireRate:950, color:0x44ddff, pCol:0x44ddff, type:'slow', pSpeed:320, slowF:0.45, slowD:3000 },
+  lightning_v2:{ name:'Tesla MkII', icon:'⚡', cost:280, dmg:35, range:150, fireRate:1100, color:0xffdd44, pCol:0xffdd44, type:'chain', pSpeed:650, chainN:4, chainR:100 },
+  sniper_v2: { name:'Sniper MkII', icon:'🎯', cost:230, dmg:95, range:220, fireRate:2000, color:0xff44aa, pCol:0xff44aa, type:'single', pSpeed:650 },
+  laser_v2:  { name:'Laser MkII', icon:'💎', cost:320, dmg:40, range:140, fireRate:80, color:0x66ffff, pCol:0x66ffff, type:'beam', pSpeed:0, beamW:3 },
+  rocket_v2: { name:'Rocket MkII', icon:'🚀', cost:350, dmg:85, range:170, fireRate:2200, color:0xffaa44, pCol:0xffaa44, type:'homing', pSpeed:170, aoeR:55 },
+};
+
+// Research unlocks at wave milestones (every 10 waves)
+function getUnlockedResearch(wave) {
+  const unlocked = {};
+  if (wave >= 10) Object.assign(unlocked, RESEARCH);
+  return unlocked;
+}
+
+// === STEP 18: Daily challenges — random constraints, localStorage persistence ===
+const DAILY_CHALLENGES = {
+  key: 'NEON_DAILY',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      // Check if it's today (based on date string)
+      const today = new Date().toISOString().split('T')[0];
+      if (v.date !== today) return null; // New day, no challenge yet
+      return v.challenge;
+    } catch(e) { return null; }
+  },
+  save(challenge) {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(this.key, JSON.stringify({ date: today, challenge }));
+    } catch(e) {}
+  },
+  generate() {
+    const challenges = [
+      { name:'No Towers', desc:'Survive without placing any towers!', constraint:'no_towers' },
+      { name:'Speed Run', desc:'Complete all waves in under 15 minutes!', constraint:'speed_run' },
+      { name:'Budget Build', desc:'Win with less than 500 gold spent!', constraint:'budget' },
+      { name:'Single Tower', desc:'Use only one tower type!', constraint:'single_tower' },
+      { name:'No Upgrades', desc:'Win without upgrading any towers!', constraint:'no_upgrades' },
+      { name:'Boss Only', desc:'Survive 30 waves with only bosses!', constraint:'boss_only' },
+      { name:'Fast & Furious', desc:'All enemies 2x speed!', constraint:'fast_enemies' },
+      { name:'Iron Core', desc:'Lose 0 lives!', constraint:'iron_core' },
+    ];
+    // Use date as seed for deterministic daily challenge
+    const today = new Date().toISOString().split('T')[0];
+    let hash = 0;
+    for (let i = 0; i < today.length; i++) hash = ((hash << 5) - hash) + today.charCodeAt(i);
+    const idx = Math.abs(hash % challenges.length);
+    return challenges[idx];
+  }
+};
+
+// === STEP 19: Leaderboards — local high scores per mode/difficulty ===
+const LEADERBOARD = {
+  key: 'NEON_LEADERBOARD',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return [];
+      return JSON.parse(raw).sort((a, b) => b.score - a.score);
+    } catch(e) { return []; }
+  },
+  save(scores) {
+    try { localStorage.setItem(this.key, JSON.stringify(scores.slice(0, 50))); } catch(e) {}
+  },
+  addEntry(mode, wave, kills, lives, score) {
+    const scores = this.load();
+    scores.push({ mode, wave, kills, lives, score, date: new Date().toISOString() });
+    scores.sort((a, b) => b.score - a.score);
+    this.save(scores.slice(0, 50));
+    return scores;
+  },
+  getBest(mode) {
+    const scores = this.load();
+    return scores.find(s => s.mode === mode) || null;
+  }
+};
+
+// === STEP 20: Tutorial mode — guided first waves with tooltips ===
+const TUTORIAL = {
+  steps: [
+    { wave:1, text:'Welcome! Select a tower from the bottom panel.', action:null },
+    { wave:1, text:'Tap an empty cell to place it!', action:'place' },
+    { wave:2, text:'Double-tap a placed tower to upgrade it.', action:'upgrade' },
+    { wave:3, text:'Tap 💰 to collect floating power-ups.', action:'collect' },
+    { wave:5, text:'Beware 🛡️ Nimbus — shielded enemies!', action:null },
+    { wave:10, text:'Boss every 5 waves — prepare your defenses!', action:null },
+    { wave:25, text:'Survival waves begin! Good luck!', action:null },
+  ],
+  currentStep: 0,
+  show() {
+    if (this.currentStep >= this.steps.length) return;
+    const step = this.steps[this.currentStep];
+    // Show tooltip-style message at top of screen
+    const msg = document.createElement('div');
+    msg.id = 'tutorialMsg';
+    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;background:rgba(0,0,0,0.9);border:2px solid #8844ff;border-radius:12px;padding:16px 20px;color:#fff;font-size:14px;text-align:center;max-width:300px;box-shadow:0 0 20px rgba(136,68,255,0.5);';
+    msg.innerHTML = `<div style="font-weight:700;color:#8844ff;margin-bottom:8px;">📖 TUTORIAL</div><div>${step.text}</div>`;
+    document.getElementById('gameContainer').appendChild(msg);
+    
+    // Auto-hide after 4 seconds, then advance
+    setTimeout(() => {
+      msg.style.transition = 'opacity 0.5s';
+      msg.style.opacity = '0';
+      setTimeout(() => {
+        msg.remove();
+        this.currentStep++;
+        if (this.currentStep < this.steps.length) {
+          // Show next step when wave starts
+          const origStart = window._gameScene?._startWave;
+          if (origStart) {
+            window._gameScene._startWave = function() {
+              origStart.call(this);
+              // Show next tutorial step after wave intro
+              setTimeout(() => {
+                const nextStep = TUTORIAL.steps[TUTORIAL.currentStep];
+                if (nextStep && nextStep.wave === window._gameScene.wave) {
+                  TUTORIAL.show();
+                }
+              }, 1500);
+            };
+          }
+        }
+      }, 500);
+    }, 4000);
+  },
+  reset() { this.currentStep = 0; }
+};
 // Override the original getWaveEnemies with our new version
 const _origGetWaveEnemies = getWaveEnemies;
 getWaveEnemies = function(n) { return getWaveEnemyTypes(n); };
@@ -1741,7 +1896,7 @@ class GameScene extends Phaser.Scene {
       this._particles(MAP_W/2, MAP_H/2, 0xffcc00, 20, 130);
       this._updateHUD();
       document.getElementById('startWave').style.display = '';
-      if (this.wave >= TOTAL_WAVES) { this._win(); }
+if (this.wave >= TOTAL_WAVES) { this._win(); }
       else if (this.wave >= 25) {
         // Between wave 25 and 30: show survival wave notification
         const survNum = this.wave - 25;
@@ -2199,6 +2354,10 @@ class GameScene extends Phaser.Scene {
     SFX.init();
     document.getElementById('startScreen').style.display = 'none';
     this.gameStarted = true;
+    // === STEP 20: Show tutorial on first game ===
+    if (!localStorage.getItem('NEON_TUTORIAL_DONE')) {
+      TUTORIAL.show();
+    }
     this.goldStartTime = this.time.now;
     if (this._canvas) { this._canvas.style.visibility = 'visible'; }
     this._updateWavePreview();
