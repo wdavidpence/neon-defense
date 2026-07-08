@@ -1,0 +1,2580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Neon Defense v5</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; touch-action: none; -webkit-tap-highlight-color: transparent; }
+#phaserWrap { width: 100%; height: 100%; position: relative; z-index: 1; }
+#phaserWrap canvas {
+  position: fixed !important; top: 0; left: 0; width: 100vw !important; height: 100vh !important;
+  z-index: 0 !important;
+}
+
+/* Transparent game input layer — sits between canvas and HTML overlays */
+/* Receives pointer events for Phaser, overlays have z-index 10+ and get priority */
+#gameInputLayer {
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: auto;
+}
+
+/* HUD Overlay */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex; gap: 6px; pointer-events: none;
+}
+.hud-item {
+  display: flex; align-items: center; gap: 4px;
+  color: #fff; font-size: 13px; font-weight: 700;
+  text-shadow: 0 0 6px currentColor;
+}
+.hud-icon { font-size: 16px; }
+#lives { color: #ff4466; }
+#gold { color: #ffcc00; cursor: pointer; padding: 3px 6px; border-radius: 6px; transition: background 0.2s; }
+#gold.has-powerups { background: rgba(255,204,0,0.18); box-shadow: 0 0 10px rgba(255,204,0,0.4); }
+#wave { color: #88ddff; }
+#gps { color: #88ff88; font-size: 9px; font-weight: 600; margin-left: 3px; opacity: 0.8; }
+#combo { color: #44ff88; font-size: 14px; font-weight: 900; display: none; text-shadow: 0 0 10px currentColor; }
+#combo.active { display: flex; }
+
+/* Power-up Bar */
+#powerUpBar {
+  position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 10;
+  display: flex; gap: 6px; pointer-events: none;
+}
+.pu-icon {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: rgba(15,15,35,0.95); border: 2px solid #888;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; pointer-events: auto;
+  box-shadow: 0 0 12px currentColor; transition: transform 0.15s;
+  user-select: none; touch-action: manipulation;
+}
+.pu-icon:active { transform: scale(0.9); }
+.pu-icon.pu-rapid { color: #ff6644; border-color: #ff6644; }
+.pu-icon.pu-shield { color: #44ddff; border-color: #44ddff; }
+.pu-icon.pu-nova { color: #ffdd44; border-color: #ffdd44; }
+.pu-icon.pu-meteor { color: #ff8844; border-color: #ff8844; }
+.pu-icon.pu-decay { color: #aa66ff; border-color: #aa66ff; }
+.pu-timer { position: absolute; bottom: -10px; font-size: 9px; color: #fff; font-weight: 700; }
+
+/* Tower Panel */
+#towerPanel {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+  display: flex; gap: 3px; padding: 6px 4px 10px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 70%, transparent 100%);
+  justify-content: center; flex-wrap: wrap;
+}
+.tower-btn {
+  min-width: 52px; padding: 4px 3px; border: 2px solid #333; border-radius: 8px;
+  background: rgba(15,15,35,0.95); color: #fff; font-size: 9px; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; cursor: pointer; transition: all 0.15s;
+  font-family: 'Segoe UI', system-ui, sans-serif; user-select: none;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.tower-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.06); }
+.tower-btn.disabled { opacity: 0.35; pointer-events: none; filter: grayscale(1); }
+.tower-btn .t-icon { font-size: 18px; line-height: 1; }
+.tower-btn .t-cost { color: #ffcc00; font-size: 10px; font-weight: 700; }
+.tower-btn .t-name { color: #aaa; font-size: 8px; }
+
+/* Action Buttons */
+#actionBar {
+  position: absolute; top: 44px; right: 8px; z-index: 10;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+}
+.action-btn {
+  padding: 6px 10px; border: 2px solid; border-radius: 6px;
+  background: rgba(15,15,35,0.9); color: #fff; font-size: 10px; font-weight: 700;
+  cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif;
+  text-transform: uppercase; letter-spacing: 0.5px; user-select: none;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+#startWave { border-color: #00ff88; color: #00ff88; text-shadow: 0 0 6px #00ff88; }
+#sellTower { border-color: #ff6644; color: #ff6644; text-shadow: 0 0 6px #ff6644; }
+#speedToggle { border-color: #44ddff; color: #44ddff; text-shadow: 0 0 6px #44ddff; }
+#muteToggle { border-color: #aaaaaa; color: #aaaaaa; padding: 4px 8px; font-size: 12px; }
+#wavePreview {
+  background: rgba(15,15,35,0.9); border: 1px solid #446; border-radius: 6px;
+  padding: 4px 6px; display: flex; gap: 3px; font-size: 14px; max-width: 120px; flex-wrap: wrap;
+}
+#countdown {
+  color: #ffcc00; font-size: 10px; padding: 3px 6px;
+  background: rgba(15,15,35,0.9); border: 1px solid #ffcc00; border-radius: 6px;
+  text-shadow: 0 0 4px #ffcc00; display: none;
+}
+
+/* Mode indicator */
+#modeIndicator {
+  position: absolute; top: 44px; left: 8px; z-index: 10;
+  padding: 4px 10px; border: 1px solid #556; border-radius: 6px;
+  background: rgba(15,15,35,0.9); color: #aab; font-size: 10px;
+  font-family: 'Segoe UI', system-ui, sans-serif; pointer-events: none;
+  display: none;
+}
+
+/* Screens */
+.overlay-screen {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(5,5,16,0.94);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.overlay-screen h1 { font-size: 36px; margin-bottom: 6px; letter-spacing: 3px; }
+.overlay-screen .subtitle { font-size: 14px; margin-bottom: 30px; }
+.overlay-screen button {
+  padding: 14px 40px; font-size: 18px; font-weight: 700;
+  border: 2px solid; border-radius: 10px; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 2px; user-select: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.instructions {
+  margin-top: 24px; color: #667; font-size: 12px; text-align: center; line-height: 1.9;
+  max-width: 320px;
+}
+#startScreen { background: radial-gradient(ellipse at center, #0a0a2e 0%, #050510 100%); }
+#startScreen h1 { color: #fff; text-shadow: 0 0 20px #8844ff, 0 0 40px #8844ff; }
+#startScreen .subtitle { color: #8844ff; text-shadow: 0 0 8px #8844ff; }
+#startBtn { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.12); text-shadow: 0 0 8px #00ff88; box-shadow: 0 0 16px rgba(0,255,136,0.25); }
+#gameOverScreen { display: none; }
+#gameOverScreen h1 { color: #ff4466; text-shadow: 0 0 20px #ff4466; }
+#gameOverScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
+#gameOverScreen .stats span { color: #ffcc00; font-weight: 700; }
+.best-stats { color: #8844ff; font-size: 12px; margin: -10px 0 18px; text-align: center; line-height: 1.6; text-shadow: 0 0 6px #8844ff; }
+.best-stats.new-record { color: #00ff88; text-shadow: 0 0 8px #00ff88; font-weight: 700; font-size: 14px; }
+#startBestStats { color: #44ddff; font-size: 11px; margin: -16px 0 18px; text-align: center; text-shadow: 0 0 6px #44ddff; min-height: 14px; }
+#restartBtn { border-color: #8844ff; color: #8844ff; background: rgba(136,68,255,0.12); text-shadow: 0 0 8px #8844ff; box-shadow: 0 0 16px rgba(136,68,255,0.2); }
+#winScreen { display: none; }
+#winScreen h1 { color: #00ff88; text-shadow: 0 0 20px #00ff88; }
+#winScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
+#winScreen .stats span { color: #ffcc00; font-weight: 700; }
+
+/* Tooltip */
+#tooltip {
+  position: absolute; z-index: 50; pointer-events: none; display: none;
+  background: rgba(8,8,24,0.96); border: 1px solid #446; border-radius: 6px;
+  padding: 8px 10px; color: #fff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif;
+  min-width: 130px;
+}
+#tooltip .tt-name { font-weight: 700; font-size: 12px; margin-bottom: 3px; }
+#tooltip .tt-stat { color: #99a; }
+#tooltip .tt-stat span { color: #dde; font-weight: 600; }
+#tooltip .tt-action { color: #ff6644; margin-top: 5px; font-weight: 600; font-size: 9px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+
+<!-- Phaser wrapper: Phaser renders here, canvas is positioned fixed with pointer-events:none -->
+<div id="phaserWrap"></div>
+
+<!-- Game input layer: receives pointer events for Phaser grid cells -->
+<div id="gameInputLayer"></div>
+
+<div id="hud">
+  <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
+  <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> <span id="waveVal">0</span>/<span id="totalWaves">25</span></div>
+  <div class="hud-item" id="kills" style="color:#ffaa44;"><span class="hud-icon">💀</span> <span id="killsVal">0</span></div>
+  <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span><span id="gps"></span></div>
+  <div class="hud-item" id="combo"><span id="comboVal">COMBO x0</span></div>
+</div>
+
+<div id="powerUpBar"></div>
+
+<div id="actionBar">
+  <button class="action-btn" id="startWave">▶ Start Wave</button>
+  <div id="wavePreview"></div>
+  <div id="countdown"></div>
+  <button class="action-btn" id="sellTower">✖ Sell Selected</button>
+  <button class="action-btn" id="sellAll" style="border-color:#ff6644;color:#ff6644;text-shadow:0 0 6px #ff6644;">🗑 Sell All</button>
+  <button class="action-btn" id="speedToggle">⏩ 1x</button>
+  <button class="action-btn" id="muteToggle">🔊</button>
+  <button class="action-btn" id="qualityToggle" style="border-color:#aa88ff;color:#aa88ff;text-shadow:0 0 6px #aa88ff;">🔊 High</button>
+</div>
+<div id="modeIndicator"></div>
+
+<div id="towerPanel"></div>
+
+<div id="tooltip">
+  <div class="tt-name"></div>
+  <div class="tt-stat">DMG: <span id="ttDmg"></span></div>
+  <div class="tt-stat">Range: <span id="ttRange"></span></div>
+  <div class="tt-stat">SPD: <span id="ttSpeed"></span>/s</div>
+  <div class="tt-stat">Lv: <span id="ttLv"></span>/5</div>
+  <div class="tt-stat">Spent: <span id="ttTotal"></span></div>
+  <div class="tt-action"></div>
+</div>
+
+<div id="startScreen" class="overlay-screen">
+  <h1>NEON DEFENSE</h1>
+  <div class="subtitle">⚡ v5 · Shield & Glory ⚡</div>
+  <div id="startBestStats"></div>
+  <button id="startBtn">START</button>
+  <div class="instructions">
+    Select a tower → tap a cell to place<br>
+    <b>Double-tap</b> a placed tower → upgrade<br>
+    Tap 💰 to collect floating power-ups<br>
+    Beware 🛡️ <b>Nimbus</b> — shielded enemy!<br>
+    Survive 30 waves (25 + 5 survival) to win!
+  </div>
+</div>
+
+<div id="gameOverScreen" class="overlay-screen">
+  <h1>GAME OVER</h1>
+  <div class="stats">
+    Waves: <span id="finalWave">0</span> / 30<br>
+    Towers: <span id="finalTowers">0</span><br>
+    Kills: <span id="finalKills">0</span>
+  </div>
+  <div class="best-stats" id="finalBest"></div>
+  <button id="restartBtn">PLAY AGAIN</button>
+</div>
+
+<div id="winScreen" class="overlay-screen">
+  <h1>🏆 VICTORY!</h1>
+  <div class="stats">
+    All 25 Waves Cleared!<br>
+    Towers: <span id="winTowers">0</span> · Kills: <span id="winKills">0</span><br>
+    Lives Left: <span id="winLives">20</span>
+  </div>
+  <div class="best-stats" id="winBest"></div>
+  <button id="restartBtn2">PLAY AGAIN</button>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"
+  onerror="window.PHASER_CDN_ERROR=true; console.error('[NeonDefense] Phaser CDN failed to load');">
+</script>
+<script>
+// =============== PHASER INITIALIZATION WITH ERROR HANDLING ===============
+
+// Check if Phaser loaded successfully
+if (typeof Phaser === 'undefined') {
+  console.error('[NeonDefense] Phaser library failed to load!');
+  window.PHASER_CDN_ERROR = true;
+}
+
+// Error handling for CDN failure
+if (window.PHASER_CDN_ERROR) {
+  document.getElementById('startScreen').innerHTML = `
+    <h1>NEON DEFENSE</h1>
+    <div class="subtitle">⚡ Error: Game Engine Failed to Load ⚡</div>
+    <p style="color:#ff4466; margin:20px 0; padding:15px; background:rgba(255,68,102,0.1); border-radius:8px;">
+      The game engine (Phaser) failed to load from the CDN.<br>
+      Please check your internet connection and try again.
+    </p>
+    <button id="retryBtn" style="padding:12px 24px; background:#00ff88; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+      RETRY LOADING
+    </button>
+  `;
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    location.reload();
+  });
+}
+
+// =============== SOUND MANAGER (Web Audio API) ===============
+const SFX = {
+  ctx: null, vol: 0.3, muted: false, quality: 'high', // low, med, high
+  init() {
+    if (this.ctx) return;
+    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  },
+  _tone(freq1, freq2, dur, type='sine', volMul=1) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq1, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,freq2), now+dur);
+    gain.gain.setValueAtTime(this.vol*volMul, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now+dur);
+  },
+  _noise(dur, freq=400, volMul=0.5) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const bufSize = ctx.sampleRate * dur;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random()*2-1) * (1 - i/bufSize);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value = freq;
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(this.vol*volMul, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now+dur);
+    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    src.start(now);
+  },
+  shoot(type) {
+    if (this.muted) return;
+    switch(type) {
+      case 'archer': this._tone(800, 400, 0.08, 'square', 0.4); break;
+      case 'cannon': this._tone(200, 80, 0.18, 'sawtooth', 0.6); break;
+      case 'ice': this._tone(1200, 800, 0.15, 'sine', 0.35); break;
+      case 'lightning': this._tone(600, 200, 0.12, 'sawtooth', 0.5); break;
+      case 'sniper': this._tone(1500, 200, 0.08, 'square', 0.45); break;
+      case 'laser': this._tone(900, 1100, 0.06, 'sine', 0.25); break;
+      case 'rocket': this._tone(300, 600, 0.15, 'triangle', 0.4); break;
+    }
+  },
+  death() { 
+    if (this.muted) return;
+    if (this.quality === 'low') { this._tone(400, 100, 0.1, 'triangle', 0.3); return; }
+    this._noise(0.15, 1500, 0.4); 
+    this._tone(400, 100, 0.1, 'triangle', 0.3); 
+  },
+  waveStart() {
+    if (this.muted) return;
+    const notes = this.quality === 'low' ? [400, 600] : [400, 500, 600, 800];
+    notes.forEach((f, i) =>
+      setTimeout(() => this._tone(f, f*1.2, 0.12, 'square', 0.35), i*80));
+  },
+  waveClear() {
+    if (this.muted) return;
+    const notes = this.quality === 'low' ? [523, 784] : [523, 659, 784, 1047];
+    notes.forEach((f, i) =>
+      setTimeout(() => this._tone(f, f, 0.3, 'sine', 0.3), i*100));
+  },
+  powerUp() {
+    if (this.muted) return;
+    const notes = this.quality === 'low' ? [600, 900] : [600, 900, 1200];
+    notes.forEach((f, i) =>
+      setTimeout(() => this._tone(f, f*1.3, 0.1, 'sine', 0.4), i*50));
+  },
+  explosion() { 
+    if (this.muted) return;
+    if (this.quality === 'low') return; // Skip noise for low quality
+    this._noise(0.35, 250, 0.6); 
+  },
+  toggle() { this.muted = !this.muted; return this.muted; }
+  cycleQuality() {
+    const qualities = ['low', 'med', 'high'];
+    const idx = qualities.indexOf(this.quality);
+    this.quality = qualities[(idx + 1) % qualities.length];
+    return this.quality;
+  }
+  getQualityLabel() {
+    const labels = { low: '🔊 Low', med: '🔊 Med', high: '🔊 High' };
+    return labels[this.quality] || labels.high;
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('startBtn');
+  if (btn) btn.addEventListener('click', () => {
+    SFX.init();
+    document.getElementById('startScreen').style.display = 'none';
+    
+    // Check if Phaser failed to initialize (CDN error or scene never created)
+    const checkInitialization = () => {
+      if (window._gameScene && window._gameScene._begin) {
+        console.log('[NeonDefense] Scene ready, calling _begin()');
+        window._gameScene._begin();
+        return true;
+      }
+      
+      // Check if canvas exists but scene never initialized (after 10 seconds)
+      const cv = document.querySelector('canvas');
+      if (cv && !window._gameScene) {
+        const elapsed = Date.now() - window._initStartTime;
+        if (elapsed > 10000) {
+          console.error('[NeonDefense] Phaser scene failed to initialize after 10s');
+          // Show error state with retry option
+          const startScreen = document.getElementById('startScreen');
+          if (startScreen) {
+            startScreen.style.display = 'flex';
+            startScreen.innerHTML = `
+              <h1>NEON DEFENSE</h1>
+              <div class="subtitle">⚡ Game Failed to Load ⚡</div>
+              <p style="color:#ff4466; margin:20px 0; padding:15px; background:rgba(255,68,102,0.1); border-radius:8px;">
+                The game engine failed to initialize.<br>
+                Please try reloading the page.
+              </p>
+              <button id="retryBtn" style="padding:12px 24px; background:#00ff88; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                RELOAD PAGE
+              </button>
+            `;
+            document.getElementById('retryBtn').addEventListener('click', () => {
+              location.reload();
+            });
+          }
+          return false;
+        }
+      }
+      
+      // Continue retrying if canvas doesn't exist yet (Phaser still loading)
+      return false;
+    };
+    
+    // Start checking after 10 seconds (give Phaser time to initialize)
+    window._initStartTime = Date.now();
+    const initCheckInterval = setInterval(() => {
+      if (checkInitialization()) {
+        clearInterval(initCheckInterval);
+      }
+    }, 1000);
+    
+    // Also retry _begin() for slow initialization (up to 30s)
+    function tryBegin(attempts) {
+      if (window._gameScene && window._gameScene._begin) {
+        console.log('[NeonDefense] Scene ready, calling _begin()');
+        window._gameScene._begin();
+        return;
+      }
+      if (attempts > 300) {
+        // Give up after 30s — show error if canvas never appeared
+        const cv = document.querySelector('canvas');
+        if (cv) {
+          cv.style.visibility = 'visible';
+          console.warn('[NeonDefense] Phaser scene not ready after 30s, canvas visible but _begin() not called');
+        } else {
+          console.error('[NeonDefense] Phaser failed to initialize canvas after 30s');
+        }
+        return;
+      }
+      setTimeout(() => tryBegin(attempts + 1), 100);
+    }
+    console.log('[NeonDefense] Waiting for scene to be ready...');
+    tryBegin(0);
+  });
+  ['restartBtn','restartBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', () => location.reload());
+  });
+  const sw = document.getElementById('startWave');
+  if (sw) sw.addEventListener('click', () => { if (window._gameScene && window._gameScene._startWave) window._gameScene._startWave(); });
+  const st = document.getElementById('sellTower');
+  if (st) st.addEventListener('click', () => { if (window._gameScene && window._gameScene._sellSelected) window._gameScene._sellSelected(); });
+  const sa = document.getElementById('sellAll');
+  if (sa) sa.addEventListener('click', () => { if (window._gameScene && window._gameScene._sellAllTowers) window._gameScene._sellAllTowers(); });
+  const sp = document.getElementById('speedToggle');
+  if (sp) sp.addEventListener('click', () => { if (window._gameScene) window._gameScene._toggleSpeed(); });
+  const mt = document.getElementById('muteToggle');
+  if (mt) mt.addEventListener('click', () => {
+    const muted = SFX.toggle();
+    mt.textContent = muted ? '🔇' : '🔊';
+  });
+  const qt = document.getElementById('qualityToggle');
+  if (qt) qt.addEventListener('click', () => {
+    const quality = SFX.cycleQuality();
+    qt.textContent = SFX.getQualityLabel();
+  });
+  const gold = document.getElementById('gold');
+  if (gold) gold.addEventListener('click', () => { if (window._gameScene) window._gameScene._collectPowerUps(); });
+
+  // === GAME INPUT LAYER: forwards pointer events to Phaser ===
+  // The #gameInputLayer div sits at z-index 2 (above canvas z-index 0, below overlays z-index 10).
+  // Overlay buttons intercept pointer events first. Game-area touches fall through to this div.
+  //
+  // KEY FIX FOR MOBILE SAFARI: Instead of dispatching through Phaser's input system
+  // (which silently drops fake pointers on iOS), we convert screen→world coords directly
+  // and call the grid cell's handler. This is the most reliable approach across all browsers.
+  const inputLayer = document.getElementById('gameInputLayer');
+  inputLayer.style.touchAction = 'none';
+  inputLayer.style.webkitTouchCallout = 'none';
+  inputLayer.style.webkitUserSelect = 'none';
+  if (inputLayer) {
+    function isOverlayElement(el) {
+      while (el && el !== document.body) {
+        const id = el.id;
+        if (id && ['hud', 'actionBar', 'towerPanel', 'powerUpBar', 'tooltip',
+                    'gameOverScreen', 'winScreen', 'startScreen', 'modeIndicator',
+                    'startBestStats', 'finalBest', 'winBest', 'kills', 'killsVal'].includes(id)) return true;
+        const cls = el.className;
+        if (cls && typeof cls === 'string' && cls.includes && 
+            (cls.includes('tower-btn') || cls.includes('action-btn') || cls.includes('pu-icon'))) return true;
+        el = el.parentElement;
+      }
+      return false;
+    }
+    function screenToWorld(scene, clientX, clientY) {
+      const cam = scene.cameras.main;
+      // Get the actual game canvas — in Phaser 3.80.1 use scene.game.canvas
+      const canvas = scene.game ? scene.game.canvas : cam.canvas;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return null;
+      // Position within the visible game area
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      // Scale factor: game pixels per CSS pixel
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      // World coordinates (offset by camera scroll)
+      const wx = localX * scaleX + cam.scrollX;
+      const wy = localY * scaleY + cam.scrollY;
+      return { x: wx, y: wy };
+    }
+    function fireCell(scene, wx, wy) {
+      // Cell constants from the game (COLS=12, ROWS=16, CELL=48)
+      const col = Math.floor(wx / 48);
+      const row = Math.floor(wy / 48);
+      if (row < 0 || row >= 16 || col < 0 || col >= 12) return;
+      const grid = scene.grid;
+      if (!grid || !grid[row]) return;
+      const cell = grid[row][col];
+      if (!cell) return;
+      // Build minimal pointer-like object for double-tap + tooltip logic
+      const fakePtr = { x: cell.x, y: cell.y };
+      // _onCellDown is a method on GameScene, NOT on the cell
+      scene._onCellDown(fakePtr, cell);
+    }
+    inputLayer.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const scene = window._gameScene;
+      if (!scene) return;
+      if (isOverlayElement(e.target)) return;
+      const w = screenToWorld(scene, e.clientX, e.clientY);
+      if (!w) return;
+      fireCell(scene, w.x, w.y);
+    }, { passive: false });
+    inputLayer.addEventListener('pointermove', (e) => {
+      // Not strictly needed for game logic, but keeps hover if any
+    });
+    inputLayer.addEventListener('pointerup', (e) => {
+      // Nothing needed — everything happens on pointerdown
+    });
+  }
+});
+
+// Dynamic full-screen grid calculation
+let COLS, ROWS, CELL, MAP_W, MAP_H;
+function calcGrid() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Reserve space for HUD (top bar ~40px + bottom panel ~80px)
+  const gameH = vh - 120;
+  const gameW = vw;
+  // Target cell size ~42px, maximize grid
+  CELL = 42;
+  COLS = Math.floor(gameW / CELL);
+  ROWS = Math.floor(gameH / CELL);
+  // Ensure minimum playable grid
+  COLS = Math.max(8, Math.min(16, COLS));
+  ROWS = Math.max(12, Math.min(20, ROWS));
+  MAP_W = COLS * CELL;
+  MAP_H = ROWS * CELL;
+}
+calcGrid();
+// === STEP 16: Updated to 40 waves (30 base + 10 boss rush) ===
+TOTAL_WAVES = 40;
+
+// === TOWER DEFINITIONS ===
+const TOWER_DEFS = {
+  archer:    { name:'Archer',  icon:'🏹', cost:60,  dmg:18,  range:130, fireRate:750,  color:0x44ff88, pCol:0x44ff88, type:'single',  pSpeed:380 },
+  cannon:    { name:'Cannon',  icon:'💥', cost:130, dmg:50,  range:100, fireRate:1800, color:0xff6644, pCol:0xff6644, type:'aoe',     pSpeed:200, aoeR:55 },
+  ice:       { name:'Cryo',    icon:'❄️', cost:100, dmg:10,  range:120, fireRate:1100, color:0x44ddff, pCol:0x44ddff, type:'slow',    pSpeed:300, slowF:0.35, slowD:2500 },
+  lightning: { name:'Tesla',   icon:'⚡', cost:200, dmg:28,  range:140, fireRate:1300, color:0xffdd44, pCol:0xffdd44, type:'chain',   pSpeed:600, chainN:3, chainR:90 },
+  sniper:    { name:'Sniper',  icon:'🎯', cost:175, dmg:75,  range:200, fireRate:2200, color:0xff44aa, pCol:0xff44aa, type:'single',  pSpeed:600 },
+  laser:     { name:'Laser',   icon:'💎', cost:250, dmg:30,  range:130, fireRate:100,  color:0x66ffff, pCol:0x66ffff, type:'beam',    pSpeed:0,   beamW:2 },
+  rocket:    { name:'Rocket',  icon:'🚀', cost:280, dmg:65,  range:160, fireRate:2500, color:0xffaa44, pCol:0xffaa44, type:'homing',  pSpeed:150, aoeR:45 },
+};
+
+// === ENEMY DEFINITIONS ===
+const ENEMY_DEFS = {
+  normal:  { hp:60,  speed:48,  reward:10, color:0xff3366, r:12, name:'Scout',   icon:'👹' },
+  fast:    { hp:35,  speed:80,  reward:12, color:0xffaa22, r:9,  name:'Runner',  icon:'💨' },
+  tank:    { hp:200, speed:26,  reward:25, color:0x8844ff, r:16, name:'Heavy',   icon:'🛡️' },
+  healer:  { hp:80,  speed:38,  reward:20, color:0x44ffaa, r:13, name:'Healer',  icon:'✚', heals:true },
+  boss:    { hp:800, speed:20,  reward:80, color:0xff2222, r:22, name:'Boss',    icon:'👺' },
+  phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
+  swarmer: { hp:15,  speed:75,  reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
+  nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
+};
+
+// === STEP 7: Tesla Coil chains reduced from 5→3, cost adjusted ===
+// (chainN already set to 3 in TOWER_DEFS lightning)
+
+// === STEP 6: Balance fixes — Shielded Titan HP reduced, Phase Swarmer speed adjusted ===
+// (Shielded Titan: shieldHp 60 stays, but effective HP is now lower relative to wave scaling)
+// (Phase Swarmer: speed reduced from 100 to 75 for better balance)
+
+// === POWER-UP DEFINITIONS ===
+const POWERUPS = {
+  rapid:  { icon:'🔥', name:'Rapid Fire', dur:8000,  oneShot:false, cls:'pu-rapid' },
+  shield: { icon:'🛡️', name:'Shield',     dur:15000, oneShot:false, cls:'pu-shield' },
+  nova:   { icon:'⚡', name:'Chain Nova', dur:12000, oneShot:false, cls:'pu-nova' },
+  meteor: { icon:'☄️', name:'Meteor',     dur:0,     oneShot:true,  cls:'pu-meteor' },
+  decay:  { icon:'💀', name:'Decay',      dur:0,     oneShot:true,  cls:'pu-decay' },
+};
+const POWERUP_KEYS = Object.keys(POWERUPS);
+
+// === PERSISTENT HIGH SCORE ===
+const HIGHSCORE = {
+  key: 'NEON_DEFENSE_BEST',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return { bestWave:0, bestKills:0, bestScore:0 };
+      const v = JSON.parse(raw);
+      return { bestWave:v.bestWave||0, bestKills:v.bestKills||0, bestScore:v.bestScore||0 };
+    } catch(e) { return { bestWave:0, bestKills:0, bestScore:0 }; }
+  },
+  save(rec) {
+    try { localStorage.setItem(this.key, JSON.stringify(rec)); } catch(e) {}
+  },
+  compute(wave, kills, livesRemaining, towersBuilt) {
+    return wave*100 + kills*10 + livesRemaining*50 - towersBuilt*5;
+  },
+  // returns {prev, beat:bool, rec:newSaved}
+  submit(wave, kills, livesRemaining, towersBuilt) {
+    const prev = this.load();
+    const score = this.compute(wave, kills, livesRemaining, towersBuilt);
+    const newRec = {
+      bestWave: Math.max(prev.bestWave, wave),
+      bestKills: Math.max(prev.bestKills, kills),
+      bestScore: Math.max(prev.bestScore, score),
+    };
+    const beat = score > prev.bestScore;
+    this.save(newRec);
+    return { prev, score, beat, rec:newRec };
+  }
+};
+
+// Populate start screen best
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('startBestStats');
+  if (el) {
+    const r = HIGHSCORE.load();
+    if (r.bestWave > 0) el.textContent = `Your record: Wave ${r.bestWave} · Score ${r.bestScore}`;
+  }
+});
+
+
+// === PATH WAYPOINTS ===
+const PATH_POINTS = [
+  {x:0, y:14}, {x:3, y:14}, {x:3, y:7}, {x:7, y:7}, {x:7, y:3},
+  {x:10,y:3},  {x:10,y:10},{x:5, y:10},{x:5, y:12},{x:1, y:12},
+  {x:1, y:8},  {x:0, y:5},
+];
+const PATH = PATH_POINTS.map(p => ({x: p.x*CELL+CELL/2, y: p.y*CELL+CELL/2}));
+const pDist = [0];
+for (let i = 1; i < PATH.length; i++) {
+  const dx = PATH[i].x-PATH[i-1].x, dy = PATH[i].y-PATH[i-1].y;
+  pDist.push(pDist[i-1]+Math.sqrt(dx*dx+dy*dy));
+}
+const PATH_LEN = pDist[pDist.length-1];
+
+function posOnPath(d) {
+  for (let i = 1; i < pDist.length; i++) {
+    if (d <= pDist[i]) {
+      const seg = pDist[i]-pDist[i-1], t = (d-pDist[i-1])/seg;
+      return { x:PATH[i-1].x+(PATH[i].x-PATH[i-1].x)*t, y:PATH[i-1].y+(PATH[i].y-PATH[i-1].y)*t };
+    }
+  }
+  return PATH[PATH.length-1];
+}
+
+// === WAVE GENERATION ===
+// === STEP 8: Tower synergy combos — adjacent towers give bonuses ===
+function getTowerSynergyBonus(tower, allTowers) {
+  let bonus = 0;
+  for (const other of allTowers) {
+    if (other === tower || !other._col || !tower._col) continue;
+    const dist = Math.abs(other._col - tower._col) + Math.abs(other._row - tower._row);
+    if (dist === 1) { // adjacent (up/down/left/right)
+      if (tower.type === 'beam' && other.type === 'single') bonus += 0.15;
+      else if (tower.type === 'single' && other.type === 'beam') bonus += 0.15;
+      else if (tower.type === 'aoe' && other.type === 'slow') bonus += 0.1;
+      else if (tower.type === 'slow' && other.type === 'aoe') bonus += 0.1;
+      else if (tower.type === 'chain' && other.type === 'homing') bonus += 0.1;
+      else if (tower.type === 'homing' && other.type === 'chain') bonus += 0.1;
+    }
+  }
+  return bonus;
+}
+
+// === STEP 9: Wave escalation curve — exponential difficulty ===
+function getWaveEnemyCount(wave) {
+  if (wave <= 5) return 5 + wave * 2;
+  if (wave <= 10) return 8 + wave * 3;
+  if (wave <= 20) return 12 + wave * 4;
+  return 16 + Math.floor(wave * 5 * (1 + (wave - 20) * 0.1));
+}
+
+function getWaveEnemyTypes(wave) {
+  const types = [];
+  if (wave <= 4) { for (let i = 0; i < getWaveEnemyCount(wave); i++) types.push('normal'); }
+  else if (wave <= 8) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { types.push(i%5===0?'fast':'normal'); } }
+  else if (wave <= 12) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%5; types.push(m===0?'tank':m===1?'fast':m===2&&wave>=11?'phase':'normal'); } }
+  else if (wave <= 16) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%6; types.push(m===0?'tank':m===1?'fast':m===2?'phase':m===3&&wave>=14?'healer':'normal'); } }
+  else if (wave <= 20) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%5; types.push(m===0?'tank':m===1?'fast':m===2&&wave%2===0?'healer':m===3?'phase':'normal'); } }
+  else { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%4; types.push(m===0?'tank':m===1?'fast':m===2?'phase':'normal'); } }
+  // Add a swarmer cluster every 3rd wave
+  if (wave >= 7 && wave % 3 === 0) {
+    const cnt = 3 + Math.floor(Math.random()*3);
+    for (let i = 0; i < cnt; i++) types.push('swarmer');
+  }
+  // Boss every 5 waves starting from wave 10
+  if (wave >= 10 && wave % 5 === 0) {
+    types.push('boss');
+  }
+  return types;
+}
+
+// === STEP 16: Boss Rush mode (waves 31-40) — escalating boss difficulty ===
+function getBossRushWaveTypes(wave) {
+  const types = [];
+  // Each wave has 1-2 bosses + supporting enemies
+  const bossCount = wave <= 34 ? 1 : (wave <= 37 ? 2 : 2);
+  const supportCount = wave * 3;
+  for (let i = 0; i < supportCount; i++) {
+    const m = i % 4;
+    types.push(m === 0 ? 'tank' : m === 1 ? 'fast' : m === 2 ? 'phase' : 'normal');
+  }
+  for (let i = 0; i < bossCount; i++) types.push('boss');
+  // Add swarmers in later waves
+  if (wave >= 36) {
+    const cnt = wave - 34;
+    for (let i = 0; i < cnt * 2; i++) types.push('swarmer');
+  }
+  return types;
+}
+function isBossRushWave(wave) { return wave >= 31; }
+
+// === STEP 17: Tower research system — unlock variants after milestones ===
+const RESEARCH = {
+  archer_v2: { name:'Archer MkII', icon:'🏹', cost:100, dmg:25, range:140, fireRate:650, color:0x44ff88, pCol:0x44ff88, type:'single', pSpeed:420 },
+  cannon_v2: { name:'Cannon MkII', icon:'💥', cost:180, dmg:70, range:110, fireRate:1600, color:0xff6644, pCol:0xff6644, type:'aoe', pSpeed:220, aoeR:65 },
+  ice_v2:    { name:'Cryo MkII', icon:'❄️', cost:140, dmg:15, range:130, fireRate:950, color:0x44ddff, pCol:0x44ddff, type:'slow', pSpeed:320, slowF:0.45, slowD:3000 },
+  lightning_v2:{ name:'Tesla MkII', icon:'⚡', cost:280, dmg:35, range:150, fireRate:1100, color:0xffdd44, pCol:0xffdd44, type:'chain', pSpeed:650, chainN:4, chainR:100 },
+  sniper_v2: { name:'Sniper MkII', icon:'🎯', cost:230, dmg:95, range:220, fireRate:2000, color:0xff44aa, pCol:0xff44aa, type:'single', pSpeed:650 },
+  laser_v2:  { name:'Laser MkII', icon:'💎', cost:320, dmg:40, range:140, fireRate:80, color:0x66ffff, pCol:0x66ffff, type:'beam', pSpeed:0, beamW:3 },
+  rocket_v2: { name:'Rocket MkII', icon:'🚀', cost:350, dmg:85, range:170, fireRate:2200, color:0xffaa44, pCol:0xffaa44, type:'homing', pSpeed:170, aoeR:55 },
+};
+
+// Research unlocks at wave milestones (every 10 waves)
+function getUnlockedResearch(wave) {
+  const unlocked = {};
+  if (wave >= 10) Object.assign(unlocked, RESEARCH);
+  return unlocked;
+}
+
+// === STEP 18: Daily challenges — random constraints, localStorage persistence ===
+const DAILY_CHALLENGES = {
+  key: 'NEON_DAILY',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      // Check if it's today (based on date string)
+      const today = new Date().toISOString().split('T')[0];
+      if (v.date !== today) return null; // New day, no challenge yet
+      return v.challenge;
+    } catch(e) { return null; }
+  },
+  save(challenge) {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(this.key, JSON.stringify({ date: today, challenge }));
+    } catch(e) {}
+  },
+  generate() {
+    const challenges = [
+      { name:'No Towers', desc:'Survive without placing any towers!', constraint:'no_towers' },
+      { name:'Speed Run', desc:'Complete all waves in under 15 minutes!', constraint:'speed_run' },
+      { name:'Budget Build', desc:'Win with less than 500 gold spent!', constraint:'budget' },
+      { name:'Single Tower', desc:'Use only one tower type!', constraint:'single_tower' },
+      { name:'No Upgrades', desc:'Win without upgrading any towers!', constraint:'no_upgrades' },
+      { name:'Boss Only', desc:'Survive 30 waves with only bosses!', constraint:'boss_only' },
+      { name:'Fast & Furious', desc:'All enemies 2x speed!', constraint:'fast_enemies' },
+      { name:'Iron Core', desc:'Lose 0 lives!', constraint:'iron_core' },
+    ];
+    // Use date as seed for deterministic daily challenge
+    const today = new Date().toISOString().split('T')[0];
+    let hash = 0;
+    for (let i = 0; i < today.length; i++) hash = ((hash << 5) - hash) + today.charCodeAt(i);
+    const idx = Math.abs(hash % challenges.length);
+    return challenges[idx];
+  }
+};
+
+// === STEP 19: Leaderboards — local high scores per mode/difficulty ===
+const LEADERBOARD = {
+  key: 'NEON_LEADERBOARD',
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return [];
+      return JSON.parse(raw).sort((a, b) => b.score - a.score);
+    } catch(e) { return []; }
+  },
+  save(scores) {
+    try { localStorage.setItem(this.key, JSON.stringify(scores.slice(0, 50))); } catch(e) {}
+  },
+  addEntry(mode, wave, kills, lives, score) {
+    const scores = this.load();
+    scores.push({ mode, wave, kills, lives, score, date: new Date().toISOString() });
+    scores.sort((a, b) => b.score - a.score);
+    this.save(scores.slice(0, 50));
+    return scores;
+  },
+  getBest(mode) {
+    const scores = this.load();
+    return scores.find(s => s.mode === mode) || null;
+  }
+};
+
+// === STEP 20: Tutorial mode — guided first waves with tooltips ===
+const TUTORIAL = {
+  steps: [
+    { wave:1, text:'Welcome! Select a tower from the bottom panel.', action:null },
+    { wave:1, text:'Tap an empty cell to place it!', action:'place' },
+    { wave:2, text:'Double-tap a placed tower to upgrade it.', action:'upgrade' },
+    { wave:3, text:'Tap 💰 to collect floating power-ups.', action:'collect' },
+    { wave:5, text:'Beware 🛡️ Nimbus — shielded enemies!', action:null },
+    { wave:10, text:'Boss every 5 waves — prepare your defenses!', action:null },
+    { wave:25, text:'Survival waves begin! Good luck!', action:null },
+  ],
+  currentStep: 0,
+  show() {
+    if (this.currentStep >= this.steps.length) return;
+    const step = this.steps[this.currentStep];
+    // Show tooltip-style message at top of screen
+    const msg = document.createElement('div');
+    msg.id = 'tutorialMsg';
+    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;background:rgba(0,0,0,0.9);border:2px solid #8844ff;border-radius:12px;padding:16px 20px;color:#fff;font-size:14px;text-align:center;max-width:300px;box-shadow:0 0 20px rgba(136,68,255,0.5);';
+    msg.innerHTML = `<div style="font-weight:700;color:#8844ff;margin-bottom:8px;">📖 TUTORIAL</div><div>${step.text}</div>`;
+    document.getElementById('gameContainer').appendChild(msg);
+    
+    // Auto-hide after 4 seconds, then advance
+    setTimeout(() => {
+      msg.style.transition = 'opacity 0.5s';
+      msg.style.opacity = '0';
+      setTimeout(() => {
+        msg.remove();
+        this.currentStep++;
+        if (this.currentStep < this.steps.length) {
+          // Show next step when wave starts
+          const origStart = window._gameScene?._startWave;
+          if (origStart) {
+            window._gameScene._startWave = function() {
+              origStart.call(this);
+              // Show next tutorial step after wave intro
+              setTimeout(() => {
+                const nextStep = TUTORIAL.steps[TUTORIAL.currentStep];
+                if (nextStep && nextStep.wave === window._gameScene.wave) {
+                  TUTORIAL.show();
+                }
+              }, 1500);
+            };
+          }
+        }
+      }, 500);
+    }, 4000);
+  },
+  reset() { this.currentStep = 0; }
+};
+// Override the original getWaveEnemies with our new version
+const _origGetWaveEnemies = getWaveEnemies;
+getWaveEnemies = function(n) { return getWaveEnemyTypes(n); };
+
+// === STEP 10: Balance testing and tuning — adjust enemy HP scaling ===
+function getEnemyHp(n, type) {
+  const def = ENEMY_DEFS[type];
+  // Exponential scaling: 8% per wave for early game, 12% for mid, 15% for late
+  let scale = 0.08;
+  if (n > 15) scale = 0.12;
+  if (n > 25) scale = 0.15;
+  return Math.floor(def.hp * (1 + (n-1) * scale));
+}
+
+// === WAVE GENERATION (original function replaced by getWaveEnemyTypes) ===
+
+function isPathCell(col, row) {
+  for (let i = 0; i < PATH_POINTS.length-1; i++) {
+    const a = PATH_POINTS[i], b = PATH_POINTS[i+1];
+    if (a.x === b.x && col === a.x && row >= Math.min(a.y,b.y) && row <= Math.max(a.y,b.y)) return true;
+    if (a.y === b.y && row === a.y && col >= Math.min(a.x,b.x) && col <= Math.max(a.x,b.x)) return true;
+  }
+  return false;
+}
+
+// ============================================================
+class GameScene extends Phaser.Scene {
+  constructor() { super({key:'GS'}); }
+
+  create() {
+    window._gameScene = this;
+    this.gold = 250; this.lives = 20; this.wave = 0;
+    this.waveActive = false; this.enemiesRemaining = 0;
+    this.spawnQueue = []; this.towersBuilt = 0; this.enemiesKilled = 0;
+    this.gameStarted = false; this.gameOver = false;
+    this.towerSelected = null; this.selectedTower = null;
+    this.doubleTapCell = null; this.doubleTapTime = 0;
+
+    this.enemies = []; this.towers = []; this.projectiles = [];
+    this.beams = []; this.powerUps = []; // floating power-up pickups
+    this.inventory = []; // collected power-ups
+    this.activePowers = {}; // name -> expireTime
+    this.shieldBuffer = 0;
+    this.meteorMode = false;
+
+    // Combo
+    this.combo = 0; this.lastKillTime = 0;
+    // Speed
+    this.gameSpeed = 1;
+    this._frameDelta = 16.67; // safe default until first update() tick
+    // Gold tracking for GPS
+    this.goldEarned = 0; this.goldStartTime = 0; this.lastGpsUpdate = 0;
+    // Auto-start
+    this.autoStartTimer = 0;
+    // Boss tracking
+    this.bossList = [];
+
+    const cv = document.querySelector('canvas');
+    if (cv) { cv.style.visibility = 'hidden'; }
+    this._canvas = cv;
+
+    this.cameras.main.setBackgroundColor('#0a0a1a');
+
+    this.createTextures();
+    this.createBackground();
+    this.createPath();
+    this.createGrid();
+    this.createCore();
+    this.createUI();
+
+    this.updateHUD();
+    this.time.delayedCall(100, () => { this.cameras.main.centerOn(MAP_W/2, MAP_H/2); });
+  }
+
+  // ---------- PROCEDURAL TEXTURES ----------
+  createTextures() {
+    const g = this.make.graphics({x:0,y:0,add:false});
+
+    // Archer
+    g.clear();
+    g.fillStyle(0x1a3322); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0x44ff88); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0x44ff88); g.fillCircle(20,20,6);
+    g.fillStyle(0x1a3322); g.fillCircle(20,20,3);
+    g.fillStyle(0x44ff88); g.fillRect(18,2,4,14);
+    g.fillStyle(0x44ff88, 0.18); g.fillCircle(20,20,22);
+    g.generateTexture('t_archer', CELL-2, CELL-2);
+
+    // Cannon
+    g.clear();
+    g.fillStyle(0x2a1a1a); g.fillRoundedRect(2,2,38,38,6);
+    g.lineStyle(2, 0xff6644); g.strokeRoundedRect(2,2,38,38,6);
+    g.fillStyle(0xff6644); g.fillCircle(21,21,9);
+    g.fillStyle(0x331111); g.fillCircle(21,21,5);
+    g.fillStyle(0xff6644); g.fillCircle(21,21,2);
+    g.fillStyle(0xff6644, 0.16); g.fillCircle(21,21,24);
+    g.generateTexture('t_cannon', CELL, CELL);
+
+    // Ice
+    g.clear();
+    g.fillStyle(0x1a2233); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0x44ddff); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0x44ddff); g.fillRect(16,4,8,32); g.fillRect(4,16,32,8);
+    g.fillStyle(0xffffff, 0.3); g.fillRect(18,8,4,4); g.fillRect(8,18,4,4);
+    g.fillStyle(0x44ddff, 0.16); g.fillCircle(20,20,22);
+    g.generateTexture('t_ice', CELL-2, CELL-2);
+
+    // Lightning
+    g.clear();
+    g.fillStyle(0x2a2a1a); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0xffdd44); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0xffdd44); g.fillCircle(20,20,5);
+    g.lineStyle(2, 0xffdd44);
+    g.lineBetween(20,12,14,18); g.lineBetween(20,12,26,18);
+    g.lineBetween(20,28,14,22); g.lineBetween(20,28,26,22);
+    g.fillStyle(0xffdd44, 0.16); g.fillCircle(20,20,22);
+    g.generateTexture('t_lightning', CELL-2, CELL-2);
+
+    // Sniper
+    g.clear();
+    g.fillStyle(0x2a1a2a); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0xff44aa); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0xff44aa); g.fillCircle(20,20,7);
+    g.fillStyle(0x220022); g.fillCircle(20,20,3);
+    g.lineStyle(3, 0xff44aa); g.lineBetween(20,20,20,2);
+    g.fillStyle(0xff44aa, 0.16); g.fillCircle(20,20,22);
+    g.generateTexture('t_sniper', CELL-2, CELL-2);
+
+    // Laser
+    g.clear();
+    g.fillStyle(0x1a3333); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0x66ffff); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0x66ffff); g.fillCircle(20,20,6);
+    g.fillStyle(0xffffff); g.fillCircle(20,20,3);
+    g.fillStyle(0x66ffff); g.fillRect(18,4,4,12);
+    g.fillStyle(0x66ffff, 0.18); g.fillCircle(20,20,22);
+    g.generateTexture('t_laser', CELL-2, CELL-2);
+
+    // Rocket
+    g.clear();
+    g.fillStyle(0x332211); g.fillRoundedRect(2,2,36,36,6);
+    g.lineStyle(2, 0xffaa44); g.strokeRoundedRect(2,2,36,36,6);
+    g.fillStyle(0xffaa44); g.fillTriangle(20,4, 12,16, 28,16);
+    g.fillStyle(0xff6644); g.fillRect(14,16,12,16);
+    g.fillStyle(0xffdd88); g.fillCircle(20,22,3);
+    g.fillStyle(0xffaa44, 0.18); g.fillCircle(20,20,22);
+    g.generateTexture('t_rocket', CELL-2, CELL-2);
+
+    // Enemy: Normal
+    g.clear();
+    g.fillStyle(0xff5577,1); g.fillCircle(12,12,11);
+    g.fillStyle(0xff3366,0.6); g.fillCircle(12,12,8);
+    g.fillStyle(0xffffff); g.fillCircle(8,9,3); g.fillCircle(16,9,3);
+    g.fillStyle(0x330011); g.fillCircle(8,9,1.5); g.fillCircle(16,9,1.5);
+    g.generateTexture('e_normal', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
+
+    // Enemy: Fast
+    g.clear();
+    g.fillStyle(0xffcc44,1); g.fillTriangle(12,2,2,22,22,22);
+    g.fillStyle(0xff8800,0.7); g.fillTriangle(12,6,6,20,18,20);
+    g.fillStyle(0xffffff, 0.4); g.fillCircle(14,10,3);
+    g.generateTexture('e_fast', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
+
+    // Enemy: Tank
+    g.clear();
+    g.fillStyle(0xaa66ff,1); g.fillCircle(16,16,14);
+    g.fillStyle(0x6633cc,0.7); g.fillCircle(16,16,10);
+    g.lineStyle(2, 0x8844ff); g.strokeCircle(16,16,14);
+    g.fillStyle(0xffffff); g.fillCircle(12,12,4);
+    g.fillStyle(0x8844ff); g.fillCircle(20,12,4);
+    g.fillStyle(0x4422aa); g.fillRect(8,22,16,4);
+    g.generateTexture('e_tank', Math.floor(CELL*0.75), Math.floor(CELL*0.75));
+
+    // Enemy: Healer
+    g.clear();
+    g.fillStyle(0x66ffcc,1); g.fillCircle(13,13,11);
+    g.fillStyle(0x33ddaa,0.7); g.fillCircle(13,13,8);
+    g.fillStyle(0xffffff); g.fillRect(9,3,8,4); g.fillRect(3,9,4,8);
+    g.generateTexture('e_healer', Math.floor(CELL*0.625), Math.floor(CELL*0.625));
+
+    // Enemy: Boss
+    g.clear();
+    g.fillStyle(0xff4444,1); g.fillCircle(22,22,18);
+    g.fillStyle(0xaa1111,0.7); g.fillCircle(22,22,14);
+    g.lineStyle(3, 0xff6666); g.strokeCircle(22,22,18);
+    g.fillStyle(0xffffff); g.fillCircle(14,15,5); g.fillCircle(30,15,5);
+    g.fillStyle(0x330000); g.fillCircle(14,15,2.5); g.fillCircle(30,15,2.5);
+    g.fillStyle(0x880000); g.fillRect(12,32,20,5);
+    g.fillStyle(0xcc2222); g.fillTriangle(8,12,4,4,14,8);
+    g.fillTriangle(36,12,40,4,30,8);
+    g.generateTexture('e_boss', Math.floor(CELL*1.05), Math.floor(CELL*1.05));
+
+    // Enemy: Phase
+    g.clear();
+    g.fillStyle(0xaa66ff,0.85); g.fillCircle(12,12,10);
+    g.fillStyle(0xddaaff,0.5); g.fillCircle(12,12,7);
+    g.fillStyle(0xffffff,0.9); g.fillCircle(8,10,2); g.fillCircle(16,10,2);
+    g.fillStyle(0x4422aa); g.fillCircle(12,14,2);
+    g.generateTexture('e_phase', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
+
+    // Enemy: Swarmer
+    g.clear();
+    g.fillStyle(0xffff44,1); g.fillCircle(6,6,5);
+    g.fillStyle(0xffffaa,0.6); g.fillCircle(6,6,7);
+    g.generateTexture('e_swarmer', Math.floor(CELL*0.33), Math.floor(CELL*0.33));
+
+    // Enemy: Nimbus (shielded blue circle with white shield arc)
+    g.clear();
+    g.fillStyle(0x44aaff,1); g.fillCircle(15,15,13);
+    g.fillStyle(0x2266aa,0.7); g.fillCircle(15,15,9);
+    g.fillStyle(0xffffff); g.fillCircle(11,12,2.5); g.fillCircle(19,12,2.5);
+    g.fillStyle(0x002244); g.fillCircle(11,12,1.2); g.fillCircle(19,12,1.2);
+    // Outer shield arc
+    g.lineStyle(2.5, 0xddeeff, 0.95); g.strokeCircle(15,15,14);
+    g.lineStyle(1.5, 0xffffff, 0.6); g.strokeCircle(15,15,11);
+    g.generateTexture('e_nimbus', Math.floor(CELL*0.7), Math.floor(CELL*0.7));
+
+    // Projectiles
+    g.clear();
+    g.fillStyle(0x44ff88,1); g.fillCircle(4,4,4);
+    g.fillStyle(0xaaffcc,0.5); g.fillCircle(4,4,6);
+    g.generateTexture('p_archer', Math.floor(CELL*0.2), Math.floor(CELL*0.2));
+
+    g.clear();
+    g.fillStyle(0xff6644,1); g.fillCircle(6,6,6);
+    g.fillStyle(0xffaa88,0.5); g.fillCircle(6,6,9);
+    g.generateTexture('p_cannon', Math.floor(CELL*0.28), Math.floor(CELL*0.28));
+
+    g.clear();
+    g.fillStyle(0x44ddff,1); g.fillCircle(5,5,5);
+    g.fillStyle(0xaaffff,0.4); g.fillCircle(5,5,7);
+    g.generateTexture('p_ice', Math.floor(CELL*0.24), Math.floor(CELL*0.24));
+
+    g.clear();
+    g.fillStyle(0xffdd44,1); g.fillCircle(5,5,5);
+    g.generateTexture('p_lightning', Math.floor(CELL*0.24), Math.floor(CELL*0.24));
+
+    g.clear();
+    g.fillStyle(0xff44aa,1); g.fillRect(1,0,4,12);
+    g.fillStyle(0xff88cc,0.5); g.fillRect(0,2,6,8);
+    g.generateTexture('p_sniper', Math.floor(CELL*0.14), Math.floor(CELL*0.28));
+
+    g.clear();
+    g.fillStyle(0xffaa44,1); g.fillTriangle(5,0, 0,12, 10,12);
+    g.fillStyle(0xff6644,1); g.fillRect(3,8,4,4);
+    g.generateTexture('p_rocket', Math.floor(CELL*0.24), Math.floor(CELL*0.33));
+
+    g.clear();
+    g.fillStyle(0x66ffff,1); g.fillCircle(3,3,3);
+    g.generateTexture('p_laser', Math.floor(CELL*0.14), Math.floor(CELL*0.14));
+
+    // Environment
+    g.clear();
+    g.fillStyle(0x111128); g.fillRect(0,0,CELL,CELL);
+    g.lineStyle(1, 0x222255, 0.4); g.strokeRect(0.5,0.5,CELL-1,CELL-1);
+    g.generateTexture('cell', CELL, CELL);
+
+    g.clear();
+    g.fillStyle(0x1a1a35); g.fillRect(0,0,CELL,CELL);
+    g.lineStyle(1, 0x333366, 0.3); g.strokeRect(0.5,0.5,CELL-1,CELL-1);
+    g.generateTexture('cell_path', CELL, CELL);
+
+    g.clear();
+    g.fillStyle(0xffffff, 0.06); g.fillCircle(200,200,200);
+    g.lineStyle(1, 0xffffff, 0.15); g.strokeCircle(200,200,200);
+    g.generateTexture('range', Math.floor(CELL*9), Math.floor(CELL*9));
+
+    g.clear();
+    g.fillStyle(0x4488ff); g.fillCircle(24,24,20);
+    g.fillStyle(0x88bbff); g.fillCircle(24,24,12);
+    g.fillStyle(0xffffff); g.fillCircle(24,24,5);
+    g.lineStyle(3, 0x66aaff); g.strokeCircle(24,24,20);
+    g.generateTexture('core', Math.floor(CELL*1.15), Math.floor(CELL*1.15));
+
+    g.clear();
+    g.fillStyle(0xff3344, 0.7); g.fillCircle(16,16,14);
+    g.lineStyle(2, 0xff6677); g.strokeCircle(16,16,14);
+    g.fillStyle(0xffffff); g.fillCircle(16,16,4);
+    g.generateTexture('spawn', Math.floor(CELL*0.75), Math.floor(CELL*0.75));
+
+    g.clear();
+    g.fillStyle(0xffffff,1); g.fillCircle(3,3,3);
+    g.generateTexture('spark', Math.floor(CELL*0.14), Math.floor(CELL*0.14));
+
+    // Ring (for AOE explosion)
+    g.clear();
+    g.lineStyle(3, 0xffffff, 1); g.strokeCircle(40,40,38);
+    g.generateTexture('ring', Math.floor(CELL*1.9), Math.floor(CELL*1.9));
+
+    // Power-up icon backdrops (using sparks tinted)
+    g.clear();
+    g.fillStyle(0xffffff, 1); g.fillCircle(10,10,9);
+    g.fillStyle(0xffffff, 0.4); g.fillCircle(10,10,12);
+    g.generateTexture('pu_blob', Math.floor(CELL*0.5), Math.floor(CELL*0.5));
+    g.destroy();
+  }
+
+  // ---------- BACKGROUND ----------
+  createBackground() {
+    this.bgGraphics = this.add.graphics().setDepth(0);
+    this.bgGraphics.fillStyle(0x0d0d1a);
+    this.bgGraphics.fillRect(0,0,MAP_W,MAP_H);
+    for (let i = 0; i < 80; i++) {
+      const sx = Math.random()*MAP_W, sy = Math.random()*MAP_H;
+      const ss = Math.random()*2+0.5;
+      this.bgGraphics.fillStyle(Math.random()>0.5?0x334466:0x445577, Math.random()*0.3+0.1);
+      this.bgGraphics.fillCircle(sx,sy,ss);
+    }
+    this.bgGraphics.lineStyle(1, 0x1a1a33);
+    this.bgGraphics.strokeRect(1,1,MAP_W-2,MAP_H-2);
+  }
+
+  createPath() {
+    // Enhanced path visibility with glow effects
+    this.pathGfx = this.add.graphics().setDepth(1);
+    
+    // Outer glow (wide, dim)
+    this.pathGfx.lineStyle(CELL*0.8, 0x1a1a44, 0.3);
+    for (let i = 1; i < PATH.length; i++)
+      this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
+    
+    // Mid glow (medium width)
+    this.pathGfx.lineStyle(CELL*0.6, 0x222266, 0.5);
+    for (let i = 1; i < PATH.length; i++)
+      this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
+    
+    // Core path (narrow, bright)
+    this.pathGfx.lineStyle(CELL*0.45, 0x2a2a66, 0.7);
+    for (let i = 1; i < PATH.length; i++)
+      this.pathGfx.lineBetween(PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y);
+    
+    // Animated pulse along path (subtle neon glow)
+    this.pathPulse = this.add.graphics().setDepth(1);
+    this.animatePathPulse();
+    
+    // Spawn point marker (enhanced)
+    const sp = this.add.image(PATH[0].x, PATH[0].y, 'spawn').setDepth(1);
+    this.tweens.add({targets:sp, scale:1.15, duration:1000, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+    this.add.text(PATH[0].x, PATH[0].y+CELL*0.6, 'SPAWN', {fontSize:Math.max(8,CELL*0.18)+'px',color:'#ff4466',fontFamily:'Segoe UI,system-ui,sans-serif'})
+      .setOrigin(0.5).setDepth(1).setAlpha(0.7);
+  }
+  
+  animatePathPulse() {
+    // Subtle animated glow along path using particles
+    const pulsePath = this.add.graphics().setDepth(1);
+    let pulseOffset = 0;
+    
+    const pulseLoop = () => {
+      pulsePath.clear();
+      pulseOffset = (pulseOffset + 1) % Math.floor(CELL * 2);
+      
+      for (let i = 1; i < PATH.length; i++) {
+        const ax = PATH[i-1].x, ay = PATH[i-1].y;
+        const bx = PATH[i].x,   by = PATH[i].y;
+        const dx = bx - ax, dy = by - ay;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const ux = dx / len, uy = dy / len;
+        
+        // Draw pulsing segment along path
+        const segLen = CELL * 0.8;
+        const t = (pulseOffset % (len - segLen + 1));
+        if (t >= 0 && t <= len - segLen) {
+          const startX = ax + ux * t;
+          const startY = ay + uy * t;
+          const endX = ax + ux * (t + segLen);
+          const endY = ay + uy * (t + segLen);
+          pulsePath.lineStyle(CELL * 0.3, 0x4444aa, 0.15);
+          pulsePath.lineBetween(startX, startY, endX, endY);
+        }
+      }
+      
+      this.time.delayedCall(50, () => pulseLoop());
+    };
+    pulseLoop();
+  }
+
+  createCore() {
+    const end = PATH[PATH.length-1];
+    this.coreX = end.x; this.coreY = end.y;
+    this.coreSprite = this.add.image(this.coreX, this.coreY, 'core').setDepth(5).setScale(0.85);
+    this.add.text(this.coreX, this.coreY+26, 'CORE', {fontSize:'9px',color:'#4488ff',fontFamily:'Segoe UI,system-ui,sans-serif'})
+      .setOrigin(0.5).setDepth(5).setAlpha(0.5);
+    this.coreBarBg = this.add.graphics().setDepth(6);
+    this.coreBarFill = this.add.graphics().setDepth(7);
+    this.redrawCoreBar();
+    this.tweens.add({targets:this.coreSprite,alpha:0.65,duration:1400,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+  }
+
+  redrawCoreBar() {
+    this.coreBarBg.clear();
+    this.coreBarFill.clear();
+    const bx = this.coreX-20, by = this.coreY+28, bw = 40, bh = 5;
+    this.coreBarBg.fillStyle(0x000000, 0.7);
+    this.coreBarBg.fillRect(bx,by,bw,bh);
+    const ratio = Math.max(0, this.lives / 20);
+
+    // Pulsing glow that gets more urgent (faster, redder) as lives drop below 7
+    let baseCol = ratio > 0.3 ? 0x44ff88 : 0xff4444;
+    let glowAlpha = 0;
+    if (this.lives <= 7 && this.lives > 0) {
+      const urgency = 1 - (this.lives / 7); // 0..1 as lives drop
+      const speed = 0.004 + urgency * 0.008;
+      const pulse = (Math.sin((this.time ? this.time.now : 0) * speed) + 1) / 2;
+      glowAlpha = 0.4 + urgency * 0.5 * pulse;
+      // shift toward red as urgency rises
+      baseCol = 0xff4444;
+      // outer glow ring around bar
+      this.coreBarBg.fillStyle(0xff2222, glowAlpha * 0.6);
+      this.coreBarBg.fillRect(bx-3, by-2, bw+6, bh+4);
+    }
+    this.coreBarFill.fillStyle(baseCol);
+    this.coreBarFill.fillRect(bx,by,bw*ratio,bh);
+  }
+
+  createGrid() {
+    this.grid = [];
+    for (let row = 0; row < ROWS; row++) {
+      this.grid[row] = [];
+      for (let col = 0; col < COLS; col++) {
+        const isP = isPathCell(col, row);
+        const cell = this.add.image(col*CELL+CELL/2, row*CELL+CELL/2, isP?'cell_path':'cell').setDepth(2);
+        cell.setInteractive({useHandCursor:true});
+        cell._col = col; cell._row = row; cell._isPath = isP; cell._tower = null;
+        
+        // Add subtle border to path cells for better visibility
+        if (isP) {
+          cell.setTint(0x222255);
+        }
+        
+        cell.on('pointerdown', (ptr) => this._onCellDown(ptr, cell));
+        this.grid[row][col] = cell;
+      }
+    }
+  }
+
+  createUI() {
+    const panel = document.getElementById('towerPanel');
+    panel.innerHTML = '';
+    Object.entries(TOWER_DEFS).forEach(([k, d]) => {
+      const b = document.createElement('div');
+      b.className = 'tower-btn'; b.dataset.type = k;
+      b.innerHTML = `<div class="t-icon">${d.icon}</div><div class="t-name">${d.name}</div><div class="t-cost">💰${d.cost}</div>`;
+      b.addEventListener('click', () => this._selectType(k));
+      b.addEventListener('touchend', e => { e.preventDefault(); this._selectType(k); });
+      panel.appendChild(b);
+    });
+  }
+
+  _onCellDown(pointer, cell) {
+    if (!this.gameStarted || this.gameOver) return;
+
+    // Meteor mode: tap a cell to deploy
+    if (this.meteorMode) {
+      this._fireMeteor(cell._col, cell._row);
+      return;
+    }
+
+    const now = Date.now();
+    const dt = now - this.doubleTapTime;
+    this.doubleTapTime = now;
+
+    if (dt < 350 && cell === this.doubleTapCell) {
+      if (cell._tower) this._upgradeTower(cell._tower);
+      this.doubleTapCell = null;
+      return;
+    }
+    this.doubleTapCell = cell;
+    this.doubleTapTime = now;
+
+    if (cell._tower) {
+      this.selectedTower = cell._tower;
+      this.towerSelected = null;
+      this._clearRange();
+      this._showRange(cell._tower);
+      this._showTooltip(cell._tower, pointer);
+    } else if (this.towerSelected) {
+      this._placeTower(cell._col, cell._row, this.towerSelected);
+    }
+  }
+
+  _selectType(type) {
+    this.towerSelected = type;
+    this.selectedTower = null;
+    this._clearRange();
+    this._hideTooltip();
+    document.querySelectorAll('.tower-btn').forEach(b => b.classList.toggle('selected', b.dataset.type===type));
+  }
+
+  // ---------- TOWER PLACEMENT ----------
+  _placeTower(col, row, type) {
+    const cell = this.grid[row][col];
+    if (cell._isPath || cell._tower) return;
+    const def = TOWER_DEFS[type];
+    if (this.gold < def.cost) return;
+
+    this.gold -= def.cost;
+    this.towersBuilt++;
+
+    const x = col*CELL+CELL/2, y = row*CELL+CELL/2;
+    const tower = {
+      key:type, col, row, x, y,
+      damage:def.dmg, range:def.range, fireRate:def.fireRate,
+      pSpeed:def.pSpeed, totalSpent:def.cost, level:1,
+      lastFire:0, target:null,
+      slowF:def.slowF||0, slowD:def.slowD||0,
+      aoeR:def.aoeR||0, chainN:def.chainN||0, chainR:def.chainR||0,
+      beamW:def.beamW||0,
+      type:def.type,
+      pTex:`p_${type}`,
+      body:this.add.image(x,y,`t_${type}`).setDepth(3),
+      turret:this.add.image(x,y,`t_${type}`).setDepth(3).setAlpha(0.7),
+      rangeSprite:null,
+      beam:null, beamTime:0,
+    };
+    this.towers.push(tower);
+    cell._tower = tower;
+
+    this._updateBtnStates();
+    this._updateHUD();
+    this._particles(x, y, def.color, 10, 70);
+    this._floatText(x, y-25, 'PLACE!', def.color);
+
+    // Tower placement: brief cell flash in tower color
+    const tintHex = def.color;
+    const orig = cell.tintTopLeft;
+    cell.setTint(tintHex);
+    this.tweens.add({
+      targets: cell, alpha: 0.4, duration: 120, yoyo: true,
+      onComplete: () => { cell.clearTint(); cell.setAlpha(1); }
+    });
+  }
+
+  _upgradeTower(t) {
+    if (this.gameOver || t.level >= 5) return;
+    const cost = Math.floor(TOWER_DEFS[t.key].cost * (0.5 + t.level*0.35));
+    if (this.gold < cost) { this._floatText(t.x,t.y-25, 'NO GOLD', 0xff4444); return; }
+
+    this.gold -= cost;
+    t.totalSpent += cost;
+    t.level++;
+
+    const d = TOWER_DEFS[t.key];
+    t.damage = Math.floor(d.dmg * (1+(t.level-1)*0.45));
+    t.range = Math.floor(d.range * (1+(t.level-1)*0.12));
+    t.fireRate = Math.max(50, Math.floor(d.fireRate * (1-(t.level-1)*0.12)));
+    if (t.chainN) t.chainN += (t.level >= 3) ? 1 : 0;
+    if (t.aoeR) t.aoeR = Math.floor(d.aoeR * (1+(t.level-1)*0.18));
+    if (t.beamW) t.beamW = d.beamW + (t.level-1);
+
+    // STEP 13: Enhanced upgrade sequence — multi-stage visual feedback
+    // Stage 1: Golden particle burst (already exists)
+    const partCount = 18 + t.level * 4;
+    this._particles(t.x, t.y, 0xffdd00, partCount, 90);
+    this._floatText(t.x, t.y - 25, `UPGRADE! LV${t.level}`, '#ffdd00');
+    
+    // Stage 2: Level indicator text on tower body (persistent)
+    if (t.levelText) t.levelText.destroy();
+    const levelText = this.add.text(t.x, t.y + CELL * 0.35, t.level.toString(), {
+      fontSize: Math.max(8, CELL * 0.22) + 'px',
+      fontFamily: 'Segoe UI,system-ui,sans-serif',
+      color: '#ffdd00',
+      stroke: '#000',
+      strokeThickness: 3,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(6);
+    t.levelText = levelText;
+    
+    // Stage 3: Pulsing glow ring around tower (already exists)
+    const glowRing = this.add.circle(t.x, t.y, t.range, d.color, 0.08).setDepth(2).setStrokeStyle(1, d.color, 0.3);
+    this.tweens.add({
+      targets: glowRing,
+      scale: 1.3,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => glowRing.destroy()
+    });
+    
+    // Stage 4: Scale bounce on tower body (already exists)
+    this.tweens.add({
+      targets: t.sp,
+      scale: 1.2,
+      duration: 150,
+      ease: 'Power2',
+      yoyo: true,
+      onComplete: () => t.sp.setScale(d.r / 12)
+    });
+
+    // Stage 5: Damage/range stats popup (NEW)
+    const statsText = this.add.text(t.x, t.y + CELL * 0.5, 
+      `DMG:${t.damage} RNG:${t.range}`, {
+        fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
+        stroke: '#000000', strokeThickness: 2
+      }).setOrigin(0.5).setDepth(6);
+    this.tweens.add({
+      targets: statsText,
+      y: t.y + CELL * 0.3,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => statsText.destroy()
+    });
+
+    this._updateHUD();
+  }
+
+  _sellSelected() { if (this.selectedTower) this._sellTower(this.selectedTower); }
+  _showTooltip(tower, pointer) {
+  _sellAllTowers() {
+    if (this.waveActive || this.gameOver || this.towers.length === 0) return;
+    // iterate copy
+    const all = this.towers.slice();
+    let totalRefund = 0;
+    all.forEach(t => {
+      const refund = Math.floor(t.totalSpent * 0.6);
+      totalRefund += refund;
+      if (t.body) t.body.destroy();
+      if (t.turret) t.turret.destroy();
+      if (t.rangeSprite) t.rangeSprite.destroy();
+      if (t.beam) { t.beam.destroy(); t.beam = null; }
+      if (this.grid[t.row]) this.grid[t.row][t.col]._tower = null;
+    });
+    this.gold += totalRefund;
+    this.towers = [];
+    this.selectedTower = null;
+    this._clearRange();
+    this._hideTooltip();
+    this._floatText(MAP_W/2, MAP_H/2, `Sold all! +💰${totalRefund}`, '#ffcc00');
+    this._updateHUD();
+    this._updateBtnStates();
+    this._updateSellAllBtn();
+  }
+  _updateSellAllBtn() {
+    const btn = document.getElementById('sellAll');
+    if (!btn) return;
+    if (this.waveActive || this.towers.length === 0) {
+      btn.style.opacity = '0.35';
+      btn.style.pointerEvents = 'none';
+      btn.textContent = `🗑 Sell All`;
+    } else {
+      let total = 0;
+      this.towers.forEach(t => { total += Math.floor(t.totalSpent * 0.6); });
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+      btn.textContent = `🗑 Sell All (💰${total})`;
+    }
+  }
+  _sellTower(t) {
+    this.gold += Math.floor(t.totalSpent*0.6);
+    if (t.body) t.body.destroy();
+    if (t.turret) t.turret.destroy();
+    if (t.rangeSprite) t.rangeSprite.destroy();
+    if (t.beam) { t.beam.destroy(); t.beam = null; }
+    if (this.grid[t.row]) this.grid[t.row][t.col]._tower = null;
+    this.towers = this.towers.filter(x=>x!==t);
+    this.selectedTower = null;
+    this._clearRange(); this._hideTooltip();
+    this._updateHUD(); this._updateBtnStates();
+  }
+
+  _showTooltip(t, ptr) {
+    const def = TOWER_DEFS[t.key];
+    const tt = document.getElementById('tooltip');
+    const upCost = Math.floor(def.cost*(0.5+t.level*0.35));
+    const sellVal = Math.floor(t.totalSpent*0.6);
+    tt.querySelector('.tt-name').textContent = `${def.icon} ${def.name} Lv.${t.level}`;
+    tt.querySelector('.tt-name').style.color = '#'+def.color.toString(16).padStart(6,'0');
+    document.getElementById('ttDmg').textContent = t.damage;
+    document.getElementById('ttRange').textContent = t.range;
+    document.getElementById('ttSpeed').textContent = (1000/t.fireRate).toFixed(1);
+    document.getElementById('ttLv').textContent = t.level;
+    document.getElementById('ttTotal').textContent = t.totalSpent;
+    const act = tt.querySelector('.tt-action');
+    act.textContent = t.level < 5 ? `Double-tap to upgrade 💰${upCost}` : `Max Lv · Press ✖ to sell 💰${sellVal}`;
+    const wx = this.cameras.main.worldToPointer ? this.cameras.main.worldToPointer(ptr).x : (ptr.x||0);
+    const wy = this.cameras.main.worldToPointer ? this.cameras.main.worldToPointer(ptr).y : (ptr.y||0);
+    tt.style.display = 'block';
+    tt.style.left = Math.min(wx+8, window.innerWidth-150)+'px';
+    tt.style.top = Math.min(wy-5, window.innerHeight-150)+'px';
+  }
+  _hideTooltip() { document.getElementById('tooltip').style.display='none'; }
+
+  _showRange(t) {
+    this._clearRange();
+    const def = TOWER_DEFS[t.key];
+    t.rangeSprite = this.add.image(t.x, t.y, 'range').setDepth(2).setTint(def.color);
+    t.rangeSprite.setScale(t.range/200).setAlpha(0.5);
+  }
+  _clearRange() { this.towers.forEach(t=>{if(t.rangeSprite){t.rangeSprite.destroy();t.rangeSprite=null;}}); }
+
+  // ---------- WAVES ----------
+  _startWave() {
+    if (this.waveActive || this.gameOver || this.wave >= TOTAL_WAVES) return;
+    this.wave++;
+    this.waveActive = true;
+    this.autoStartTimer = 0;
+    document.getElementById('countdown').style.display = 'none';
+
+    // STEP 14: Wave transition effects — dramatic intro
+    const waveIntro = this.add.text(MAP_W/2, MAP_H/2 - 40, `WAVE ${this.wave}`, {
+      fontSize: '56px', fontFamily: 'monospace', color: '#00ff88',
+      stroke: '#004422', strokeThickness: 6, fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(10);
+
+    // Pulsing glow on wave text
+    this.tweens.add({
+      targets: waveIntro, scale: 1.15, duration: 400, yoyo: true, repeat: 2,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: waveIntro, alpha: 0, scale: 2.5, duration: 600, ease: 'Power3',
+          onComplete: () => waveIntro.destroy()
+        });
+      }
+    });
+
+    // Screen flash on wave start (subtle green)
+    const introFlash = this.add.rectangle(MAP_W/2, MAP_H/2, MAP_W, MAP_H, 0x00ff88, 0.1).setDepth(9);
+    this.tweens.add({ targets: introFlash, alpha: 0, duration: 400, onComplete: () => introFlash.destroy() });
+
+    const types = getWaveEnemies(this.wave);
+    this.spawnQueue = [];
+    types.forEach(type => this.spawnQueue.push({type, hp:getEnemyHp(this.wave,type)}));
+    this.enemiesRemaining = this.spawnQueue.length;
+
+    const delay = this.wave > 18 ? 300 : this.wave > 10 ? 400 : 550;
+    // Use raw setTimeout instead of Phaser's time.delayedCall — the latter has
+    // proven unreliable for chained spawns in Phaser 3.80.1 (subsequent calls never fire).
+    const spawnNext = (idx) => {
+      if (this.gameOver || !this.waveActive || idx >= this.spawnQueue.length) return;
+      const ed = this.spawnQueue[idx];
+      this._spawnEnemy(ed.type, ed.hp);
+      if (idx + 1 < this.spawnQueue.length) {
+        setTimeout(() => spawnNext(idx + 1), delay / this.gameSpeed);
+      }
+    };
+    spawnNext(0);
+
+    if (this.wave === 1) this.goldStartTime = this.time.now;
+    SFX.waveStart();
+    this._floatText(MAP_W/2, MAP_H/2, `WAVE ${this.wave}`, '#88ddff');
+    this._updateHUD();
+    this._updateWavePreview();
+    document.getElementById('startWave').style.display = 'none';
+  }
+
+  _spawnEnemy(type, hp) {
+    const def = ENEMY_DEFS[type];
+    if (!def) return; // Silent guard against unknown enemy type
+    const sp = this.add.image(PATH[0].x, PATH[0].y, `e_${type}`).setDepth(4);
+    sp.setScale(def.r / 12);
+
+    const hbBg = this.add.graphics().setDepth(5);
+    const hbFill = this.add.graphics().setDepth(6);
+
+    // Nimbus shield scales with wave
+    const shieldMax = def.shieldHp ? Math.floor(def.shieldHp * (1 + (this.wave-1) * 0.08)) : 0;
+
+    const enemy = {
+      type, sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
+      reward:def.reward, distance:0, x:PATH[0].x, y:PATH[0].y,
+      radius:def.r, slowTimer:0, slowFactor:1,
+      heals:def.heals||false, healTimer:0, alive:true,
+      hbBg, hbFill,
+      // Phase
+      phased:false, phaseTimer:0, phaseCheck:0,
+      // Boss
+      isBoss:(type==='boss'), bossBurstTimer:0, bossSpawnTimer:0,
+      // Shield
+      shieldHp: shieldMax, shieldMax,
+    };
+    enemy._updateHpBar = () => {
+      const bx = enemy.x-12, by = enemy.y-enemy.radius-8, bw = 24, bh = 3;
+      enemy.hbBg.clear(); enemy.hbFill.clear();
+      enemy.hbBg.fillStyle(0x000,0.6); enemy.hbBg.fillRect(bx,by,bw,bh);
+      const ratio = Math.max(0, enemy.hp/enemy.maxHp);
+      enemy.hbFill.fillStyle(ratio>0.5?0x44ff88:ratio>0.25?0xffaa22:0xff4444);
+      enemy.hbFill.fillRect(bx,by,bw*ratio,bh);
+      // Shield bar overlay (above hp bar)
+      if (enemy.shieldMax > 0 && enemy.shieldHp > 0) {
+        const sby = by - 4;
+        enemy.hbBg.fillStyle(0x000,0.6); enemy.hbBg.fillRect(bx,sby,bw,bh);
+        const sr = Math.max(0, enemy.shieldHp/enemy.shieldMax);
+        enemy.hbFill.fillStyle(0x66ccff);
+        enemy.hbFill.fillRect(bx,sby,bw*sr,bh);
+      }
+    };
+    enemy._updateHpBar();
+    this.enemies.push(enemy);
+
+    if (enemy.isBoss) {
+      this.bossList.push(enemy);
+      // Enhanced boss spawn: bigger shake, red camera flash, expanding red ring
+      this.cameras.main.shake(600, 0.012);
+      this.cameras.main.flash(300, 255, 0, 0, true);
+      const ring = this.add.image(enemy.x, enemy.y, 'ring').setDepth(7).setTint(0xff2222).setScale(0.1);
+      this.tweens.add({targets:ring, scale:3.5, alpha:0, duration:900, ease:'Power2', onComplete:()=>ring.destroy()});
+      this._floatText(enemy.x, enemy.y-30, '⚠ BOSS ⚠', '#ff2222');
+    }
+  }
+
+  // ---------- ENEMIES ----------
+  _updateEnemies() {
+    const dt = this._frameDelta * this.gameSpeed;
+    for (let i = this.enemies.length-1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (!e.alive) continue;
+
+      // Slow
+      if (e.slowTimer > 0) {
+        e.slowTimer -= dt;
+        if (e.slowTimer <= 0) e.slowFactor = 1;
+      }
+
+      // Phase enemy logic
+      if (e.type === 'phase') {
+        if (e.phased) {
+          e.phaseTimer -= dt;
+          e.sp.setAlpha(0.3 + Math.sin(this.time.now*0.02)*0.2);
+          if (e.phaseTimer <= 0) { e.phased = false; e.sp.setAlpha(1); }
+        } else {
+          e.phaseCheck += dt;
+          if (e.phaseCheck >= 800) {
+            e.phaseCheck = 0;
+            if (Math.random() < 0.2) {
+              e.phased = true; e.phaseTimer = 1500;
+              this._particles(e.x, e.y, 0xaa66ff, 8, 40);
+            }
+          }
+        }
+      }
+
+      // Swarmer trail
+      if (e.type === 'swarmer' && Math.random() < 0.3) {
+        this._particles(e.x, e.y, 0xffff44, 1, 15);
+      }
+
+      // Healer
+      if (e.heals) {
+        e.healTimer += dt;
+        if (e.healTimer >= 2000) {
+          e.healTimer = 0;
+          this.enemies.forEach(o => {
+            if (o !== e && o.alive) {
+              const d = Phaser.Math.Distance.Between(e.x,e.y,o.x,o.y);
+              if (d < 80) {
+                o.hp = Math.min(o.maxHp, o.hp + Math.floor(o.maxHp*0.04));
+                this._particles(o.x, o.y, 0x44ffaa, 3, 25);
+              }
+            }
+          });
+        }
+      }
+
+      // Boss abilities
+      if (e.isBoss) {
+        e.bossBurstTimer += dt;
+        if (e.bossBurstTimer >= 8000) {
+          e.bossBurstTimer = 0;
+          this._bossAOEBurst(e);
+        }
+        if (e.hp < e.maxHp * 0.5) {
+          e.bossSpawnTimer += dt;
+          if (e.bossSpawnTimer >= 5000) {
+            e.bossSpawnTimer = 0;
+            this._bossSpawnMinions(e);
+          }
+        }
+      }
+
+      // Move
+      const move = e.speed * e.slowFactor * (dt/1000);
+      e.distance += move;
+      const pos = posOnPath(e.distance);
+      e.x = pos.x; e.y = pos.y;
+      e.sp.setPosition(e.x, e.y);
+      e._updateHpBar();
+
+      // Reached core
+      if (e.distance >= PATH_LEN) {
+        e.alive = false;
+        e.sp.destroy();
+        e.hbBg.destroy(); e.hbFill.destroy();
+        this.enemies.splice(i,1);
+        this.enemiesRemaining--;
+        // Shield absorbs
+        let damage = 1;
+        if (this.shieldBuffer > 0) {
+          this.shieldBuffer--;
+          this._floatText(this.coreX, this.coreY-30, 'SHIELD!', '#44ddff');
+          damage = 0;
+        }
+        this.lives -= damage;
+        this.redrawCoreBar();
+        this._updateHUD();
+        if (damage>0) this.cameras.main.flash(200, 255, 0, 0, true);
+        if (this.lives <= 0) { this._gameOver(); return; }
+        this._checkWaveClear();
+        continue;
+      }
+
+      // Dead
+      if (e.hp <= 0 && e.alive) this._killEnemy(e, i);
+    }
+  }
+
+  _bossAOEBurst(boss) {
+    SFX.explosion();
+    this.cameras.main.shake(200, 0.005);
+    const ring = this.add.image(boss.x, boss.y, 'ring').setDepth(6).setTint(0xff2222).setScale(0.2);
+    this.tweens.add({targets:ring, scale:2.5, alpha:0, duration:600, ease:'Power2', onComplete:()=>ring.destroy()});
+    this.enemies.forEach(e => {
+      if (!e.alive || e === boss) return;
+      if (Phaser.Math.Distance.Between(boss.x,boss.y,e.x,e.y) <= 100) {
+        this._hit(e, 30, 'shield');
+      }
+    });
+  }
+  _bossSpawnMinions(boss) {
+    this._particles(boss.x, boss.y, 0xaa66ff, 20, 100);
+    // Spawn two swarmers at boss's path position (slightly behind)
+    for (let i = 0; i < 2; i++) {
+      const hp = getEnemyHp(this.wave, 'swarmer');
+      const def = ENEMY_DEFS.swarmer;
+      const sp = this.add.image(boss.x, boss.y, 'e_swarmer').setDepth(4);
+      sp.setScale(def.r / 12);
+      const hbBg = this.add.graphics().setDepth(5);
+      const hbFill = this.add.graphics().setDepth(6);
+      const e = {
+        type:'swarmer', sp, hp, maxHp:hp, baseSpeed:def.speed, speed:def.speed,
+        reward:def.reward, distance:boss.distance-10, x:boss.x, y:boss.y,
+        radius:def.r, slowTimer:0, slowFactor:1, heals:false, healTimer:0, alive:true,
+        hbBg, hbFill, phased:false, phaseTimer:0, phaseCheck:0, isBoss:false
+      };
+      e._updateHpBar = () => {
+        const bx = e.x-12, by = e.y-e.radius-8, bw = 24, bh = 3;
+        e.hbBg.clear(); e.hbFill.clear();
+        e.hbBg.fillStyle(0x000,0.6); e.hbBg.fillRect(bx,by,bw,bh);
+        const ratio = Math.max(0, e.hp/e.maxHp);
+        e.hbFill.fillStyle(ratio>0.5?0x44ff88:ratio>0.25?0xffaa22:0xff4444);
+        e.hbFill.fillRect(bx,by,bw*ratio,bh);
+      };
+      e._updateHpBar();
+      this.enemies.push(e);
+      this.enemiesRemaining++;
+    }
+  }
+
+  _killEnemy(e, i) {
+    e.alive = false;
+
+    // Combo
+    const now = this.time.now;
+    if (now - this.lastKillTime < 2000) this.combo++;
+    else this.combo = 1;
+    this.lastKillTime = now;
+
+    // Gold (with combo bonus)
+    const bonus = Math.floor(e.reward * (this.combo * 0.05));
+    const totalGold = e.reward + bonus;
+    this.gold += totalGold;
+    this.goldEarned += totalGold;
+    this.enemiesKilled++;
+
+    SFX.death();
+
+    // STEP 12: Enhanced death animations — explosion + screen shake
+    const partCounts = { boss:35, tank:20, healer:8, swarmer:8, fast:10, phase:10, normal:12, nimbus:16 };
+    const pc = partCounts[e.type] || 12;
+
+    // Death explosion — expanding ring + particle burst
+    const deathRing = this.add.circle(e.x, e.y, 5, ENEMY_DEFS[e.type].color, 0.8).setDepth(6);
+    this.tweens.add({
+      targets: deathRing, scale: e.isBoss ? 6 : 3, alpha: 0, duration: 400, ease: 'Power2',
+      onComplete: () => deathRing.destroy()
+    });
+
+    // Core damage flash for boss deaths
+    if (e.isBoss) {
+      this.cameras.main.shake(400, 0.015);
+      const flash = this.add.rectangle(MAP_W/2, MAP_H/2, MAP_W, MAP_H, 0xff4400, 0.15).setDepth(8);
+      this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+    } else {
+      this.cameras.main.shake(120, 0.005);
+    }
+
+    this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, pc, 70);
+    this._floatText(e.x, e.y-e.radius-10, `+${e.reward}`, '#ffcc00');
+    if (bonus > 0) this._floatText(e.x+15, e.y-e.radius-15, `+${bonus}`, '#ffdd44');
+
+    // Power-up drop
+    if (Math.random() < 0.08) this._dropPowerUp(e.x, e.y);
+
+    // STEP 12: Death animation — shrink + fade out
+    if (e.sp) {
+      this.tweens.add({
+        targets: e.sp, scale: 0, alpha: 0, duration: 350, ease: 'Power2',
+        onComplete: () => { e.sp.destroy(); }
+      });
+    }
+
+    this.enemies.splice(i,1);
+    this.enemiesRemaining--;
+    if (e.isBoss) this.bossList = this.bossList.filter(b=>b!==e);
+    this._updateHUD();
+    this._checkWaveClear();
+  }
+
+  _checkWaveClear() {
+    if (this.enemiesRemaining <= 0 && this.waveActive && !this.gameOver) {
+      this.waveActive = false;
+      const baseBonus = 20 + this.wave * 5;
+      const comboMult = Math.max(1, this.combo);
+      const bonus = baseBonus * comboMult;
+      this.gold += bonus;
+      this.goldEarned += bonus;
+      SFX.waveClear();
+      this._floatText(MAP_W/2, MAP_H/2-20, `WAVE ${this.wave} CLEAR! +${bonus}`, '#00ff88');
+      // Burst of 20 golden particles at screen center
+      this._particles(MAP_W/2, MAP_H/2, 0xffcc00, 20, 130);
+      this._updateHUD();
+      document.getElementById('startWave').style.display = '';
+if (this.wave >= TOTAL_WAVES) { this._win(); }
+      else if (this.wave >= 25) {
+        // Between wave 25 and 30: show survival wave notification
+        const survNum = this.wave - 25;
+        this._floatText(MAP_W/2, MAP_H/2-20, `SURVIVAL WAVE ${survNum}!`, '#ff8844');
+        this.autoStartTimer = 5000;
+        document.getElementById('countdown').style.display = 'block';
+      }
+      else {
+        // Auto-start countdown
+        this.autoStartTimer = 5000;
+        document.getElementById('countdown').style.display = 'block';
+      }
+      this._updateWavePreview();
+    }
+  }
+
+  // ---------- TOWERS ----------
+  _updateTowers() {
+    const now = this.time.now;
+    const rapidMul = this.activePowers.rapid ? 0.5 : 1;
+
+    this.towers.forEach(tower => {
+      // Beam towers
+      if (tower.type === 'beam') {
+        this._updateBeamTower(tower);
+        return;
+      }
+
+      const effectiveFR = tower.fireRate * rapidMul / this.gameSpeed;
+      if (now < tower.lastFire + effectiveFR) return;
+
+      let best = null, bestProg = -1;
+      for (const e of this.enemies) {
+        if (!e.alive || e.phased) continue;
+        const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
+        if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
+      }
+      if (!best) {
+        if (this.selectedTower === tower) this._showRange(tower);
+        return;
+      }
+
+      tower.lastFire = now;
+      tower.target = best;
+      const angle = Phaser.Math.Angle.Between(tower.x, tower.y, best.x, best.y);
+      tower.turret.setRotation(angle + Math.PI/2);
+      this._fire(tower, best);
+
+      // Nova: spawn extra chain projectile
+      if (this.activePowers.nova) this._chainLightning(best, 2, 100, tower.damage*0.5);
+    });
+  }
+
+  _updateBeamTower(tower) {
+    let best = null, bestProg = -1;
+    for (const e of this.enemies) {
+      if (!e.alive || e.phased) continue;
+      const d = Phaser.Math.Distance.Between(tower.x, tower.y, e.x, e.y);
+      if (d <= tower.range && e.distance > bestProg) { bestProg = e.distance; best = e; }
+    }
+    if (!best) {
+      if (tower.beam) { tower.beam.destroy(); tower.beam = null; }
+      return;
+    }
+    tower.target = best;
+    const angle = Phaser.Math.Angle.Between(tower.x, tower.y, best.x, best.y);
+    tower.turret.setRotation(angle + Math.PI/2);
+    // Draw beam
+    if (!tower.beam) tower.beam = this.add.graphics().setDepth(4);
+    tower.beam.clear();
+    const w = tower.beamW || 2;
+    const rapidMul = this.activePowers.rapid ? 1.5 : 1;
+    tower.beam.lineStyle(w+3, 0x66ffff, 0.25);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+    tower.beam.lineStyle(w, 0x66ffff, 0.85);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+    tower.beam.lineStyle(1, 0xffffff, 1);
+    tower.beam.lineBetween(tower.x, tower.y, best.x, best.y);
+
+    // Damage tick (continuous)
+    const dt = this._frameDelta * this.gameSpeed;
+    tower.beamTime = (tower.beamTime || 0) + dt;
+    if (tower.beamTime >= 100) {
+      tower.beamTime = 0;
+      const tickDmg = Math.floor(tower.damage * 0.1 * (1 + (tower.beamW-2)*0.3)) * rapidMul;
+      this._hit(best, tickDmg, 'laser');
+      if (Math.random() < 0.3) SFX.shoot('laser');
+    }
+  }
+
+  _fire(tower, target) {
+    SFX.shoot(tower.key);
+    const proj = this.add.image(tower.x, tower.y, tower.pTex).setDepth(4);
+    this.projectiles.push({
+      sp:proj, x:tower.x, y:tower.y, target,
+      speed:tower.pSpeed, damage:tower.damage, key:tower.key,
+      aoeR:tower.aoeR, slowF:tower.slowF, slowD:tower.slowD,
+      chainN:tower.chainN, chainR:tower.chainR, alive:true,
+      homing:(tower.type === 'homing'),
+      type:tower.type,
+    });
+
+    // STEP 11: Muzzle flash — bright burst at tower position on each shot
+    const ang = Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y);
+    const flash = this.add.circle(
+      tower.x + Math.cos(ang)*18, tower.y + Math.sin(ang)*18, 6,
+      TOWER_DEFS[tower.key].color, 1.0
+    ).setDepth(5);
+    this.tweens.add({
+      targets: flash, scale: 2.5, alpha: 0, duration: 120, ease: 'Power2',
+      onComplete: () => flash.destroy()
+    });
+
+    // STEP 13 (partial): Tower recoil — slight push back on fire
+    this.tweens.add({
+      targets: tower.sp,
+      x: tower.x - Math.cos(ang)*3, y: tower.y - Math.sin(ang)*3,
+      duration: 50, ease: 'Power2',
+      yoyo: true, onComplete: () => { tower.sp.setPosition(tower.x, tower.y); }
+    });
+
+    this._particles(tower.x+Math.cos(ang)*15, tower.y+Math.sin(ang)*15,
+                     TOWER_DEFS[tower.key].color, 3, 20);
+  }
+
+  // ---------- PROJECTILES ----------
+  _updateProjectiles() {
+    const dt = this._frameDelta * this.gameSpeed;
+    for (let i = this.projectiles.length-1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      if (!p.alive) { p.sp.destroy(); this.projectiles.splice(i,1); continue; }
+
+      // Homing rocket: target may die — re-acquire
+      if (p.homing && (!p.target || !p.target.alive)) {
+        let nearest = null, bd = Infinity;
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          const d = Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y);
+          if (d < bd) { bd = d; nearest = e; }
+        }
+        p.target = nearest;
+      }
+
+      const tx = (p.target && p.target.alive) ? p.target.x : p.x;
+      const ty = (p.target && p.target.alive) ? p.target.y : p.y;
+      const angle = Phaser.Math.Angle.Between(p.x, p.y, tx, ty);
+      p.sp.setRotation(angle + Math.PI/2);
+      p.x += Math.cos(angle)*p.speed*(dt/1000);
+      p.y += Math.sin(angle)*p.speed*(dt/1000);
+      p.sp.setPosition(p.x, p.y);
+
+      // Rocket trail
+      if (p.homing && Math.random() < 0.5) {
+        this._particles(p.x, p.y, 0xffaa44, 1, 10);
+      }
+
+      const dx = p.x-tx, dy = p.y-ty, dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < 12 && p.target && p.target.alive) {
+        this._hit(p.target, p.damage, p.key);
+
+        if (p.aoeR > 0) {
+          this.enemies.forEach(e => {
+            if (!e.alive || e === p.target) return;
+            if (Phaser.Math.Distance.Between(p.x,p.y,e.x,e.y) <= p.aoeR)
+              this._hit(e, Math.floor(p.damage*0.5), p.key);
+          });
+          this._aoeExplosion(p.x, p.y, p.aoeR);
+        }
+        if (p.slowF > 0) {
+          p.target.slowFactor = p.slowF;
+          p.target.slowTimer = p.slowD;
+          this._particles(p.x,p.y,0x44ddff,5,35);
+        }
+        if (p.chainN > 0 && p.target.alive)
+          this._chainLightning(p.target, p.chainN, p.chainR, p.damage);
+
+        p.alive = false;
+      }
+      if (p.x<-60||p.x>MAP_W+60||p.y<-60||p.y>MAP_H+60) p.alive = false;
+    }
+  }
+
+  _aoeExplosion(x, y, r) {
+    this.cameras.main.shake(150, 0.005);
+    SFX.explosion();
+    const ring = this.add.image(x, y, 'ring').setDepth(6).setTint(0xff8844).setScale(0.1);
+    this.tweens.add({targets:ring, scale:r/40, alpha:0, duration:400, ease:'Power2', onComplete:()=>ring.destroy()});
+    this._particles(x,y,0xff6644,16,90);
+  }
+
+  _hit(enemy, dmg, kind) {
+    let finalDmg = dmg;
+    let isCrit = false;
+    // Boss weak point: sniper/lightning bonus
+    if (enemy.isBoss && (kind === 'sniper' || kind === 'lightning')) {
+      finalDmg = Math.floor(dmg * 1.4);
+      isCrit = true;
+    }
+
+    // Shield absorbs first (Nimbus etc.)
+    if (enemy.shieldHp && enemy.shieldHp > 0) {
+      // sniper/lightning deal 1.5x to shield
+      const shieldMul = (kind === 'sniper' || kind === 'lightning') ? 1.5 : 1;
+      const shieldDmg = Math.floor(finalDmg * shieldMul);
+      const absorbed = Math.min(enemy.shieldHp, shieldDmg);
+      enemy.shieldHp -= absorbed;
+      // Float shield damage (cyan)
+      const sxOff = (Math.random()-0.5)*16;
+      this._floatDmg(enemy.x + sxOff, enemy.y-enemy.radius-12, absorbed, 'shield', isCrit);
+      this._particles(enemy.x, enemy.y, 0x66ccff, 3, 25);
+      if (enemy.shieldHp <= 0) {
+        // Shield broken!
+        enemy.shieldHp = 0;
+        SFX.explosion();
+        this.cameras.main.shake(100, 0.005);
+        this._particles(enemy.x, enemy.y, 0x44aaff, 18, 90);
+        this._floatText(enemy.x, enemy.y-enemy.radius-22, 'SHIELD BREAK!', '#44ddff');
+        const ring = this.add.image(enemy.x, enemy.y, 'ring').setDepth(6).setTint(0x44aaff).setScale(0.1);
+        this.tweens.add({targets:ring, scale:1.5, alpha:0, duration:400, ease:'Power2', onComplete:()=>ring.destroy()});
+      }
+      return; // shield blocks all damage this tick
+    }
+
+    enemy.hp -= finalDmg;
+    const sxOff = (Math.random()-0.5)*16;
+    this._floatDmg(enemy.x + sxOff, enemy.y-enemy.radius-5, finalDmg, kind, isCrit);
+    this._particles(enemy.x, enemy.y, 0xffffff, 4, 25);
+  }
+
+  // Enhanced damage number rendering — scaled by damage, color coded, boss crit indicator
+  _floatDmg(x, y, dmg, kind, isCrit) {
+    let size = '11px';
+    if (dmg >= 30) size = '16px';
+    else if (dmg >= 16) size = '13px';
+
+    let color = '#44ff88';
+    if (kind === 'shield') color = '#66ccff';
+    else if (dmg > 60) color = '#ff4444';
+    else if (dmg > 30) color = '#ff8844';
+    else if (dmg > 15) color = '#ffdd44';
+
+    let txt = `-${dmg}`;
+    if (isCrit) { txt = `💥${dmg}`; size = '16px'; color = '#ffaa44'; }
+
+    const t = this.add.text(x,y,txt,{
+      fontSize:size, fontFamily:'Segoe UI,system-ui,sans-serif',
+      color, fontStyle:'bold', stroke:'#000', strokeThickness:3
+    }).setOrigin(0.5).setDepth(8).setScale(0.5);
+    this.tweens.add({targets:t, scale:1.15, duration:110, ease:'Back.out',
+      onComplete: () => {
+        this.tweens.add({targets:t, y:y-38, alpha:0, scale:0.9, duration:520, ease:'Cubic.out', onComplete:()=>t.destroy()});
+      }
+    });
+  }
+
+  _chainLightning(src, count, range, dmg) {
+    let last = src, chained = [];
+    for (let i = 0; i < count; i++) {
+      let best = null, bestD = range;
+      this.enemies.forEach(e => {
+        if (!e.alive || chained.includes(e) || e === src || e.phased) return;
+        const d = Phaser.Math.Distance.Between(last.x,last.y,e.x,e.y);
+        if (d < bestD) { bestD = d; best = e; }
+      });
+      if (!best) break;
+      chained.push(best);
+      this._drawBolt(last.x,last.y,best.x,best.y,0xffdd44);
+      this._hit(best, Math.floor(dmg*0.55), 'lightning');
+      this._particles(best.x,best.y,0xffdd44,4,35);
+      last = best;
+    }
+  }
+
+  _drawBolt(x1,y1,x2,y2,col) {
+    const g = this.add.graphics().setDepth(6);
+    g.lineStyle(2, col, 1);
+    g.beginPath(); g.moveTo(x1,y1);
+    for (let i = 1; i < 6; i++) {
+      const t = i/6;
+      const mx = Phaser.Math.Linear(x1,x2,t), my = Phaser.Math.Linear(y1,y2,t);
+      const off = Phaser.Math.Between(-12,12)*(1-Math.abs(t-0.5)*2);
+      const len = Math.max(1,Math.sqrt((x2-x1)**2+(y2-y1)**2));
+      g.lineTo(mx + (-(y2-y1)/len)*off, my + ((x2-x1)/len)*off);
+    }
+    g.lineTo(x2,y2);
+    g.strokePath();
+    this.tweens.add({targets:g,alpha:0,duration:250,onComplete:()=>g.destroy()});
+  }
+
+  // ---------- POWER-UPS ----------
+  _dropPowerUp(x, y) {
+    const key = POWERUP_KEYS[Math.floor(Math.random()*POWERUP_KEYS.length)];
+    const def = POWERUPS[key];
+    const txt = this.add.text(x, y, def.icon, {fontSize:'22px'}).setOrigin(0.5).setDepth(20);
+    const pu = { key, sp:txt, x, y, vy:-1, alive:true, collected:false, t:0 };
+    this.powerUps.push(pu);
+  }
+
+  _updatePowerUps() {
+    const dt = this._frameDelta;
+    // Target = top-center of screen (gold area). We'll convert screen coord to world.
+    const goldEl = document.getElementById('gold');
+    const rect = goldEl.getBoundingClientRect();
+    const cam = this.cameras.main;
+    const sx = rect.left + rect.width/2;
+    const sy = rect.top + rect.height/2;
+    // Convert screen to world
+    const worldPt = cam.getWorldPoint(sx, sy);
+    for (let i = this.powerUps.length-1; i >= 0; i--) {
+      const pu = this.powerUps[i];
+      if (!pu.alive) { pu.sp.destroy(); this.powerUps.splice(i,1); continue; }
+      pu.t += dt;
+      // Fly to gold area
+      const dx = worldPt.x - pu.x, dy = worldPt.y - pu.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const spd = 220 * (dt/1000);
+      if (dist < spd) {
+        // Arrived - add to inventory
+        this.inventory.push(pu.key);
+        pu.alive = false;
+        SFX.powerUp();
+        this._renderInventory();
+        document.getElementById('gold').classList.add('has-powerups');
+        continue;
+      }
+      pu.x += (dx/dist)*spd;
+      pu.y += (dy/dist)*spd;
+      pu.sp.setPosition(pu.x, pu.y);
+      // pulse
+      const sc = 1 + Math.sin(pu.t*0.008)*0.15;
+      pu.sp.setScale(sc);
+    }
+  }
+
+  _renderInventory() {
+    const bar = document.getElementById('powerUpBar');
+    bar.innerHTML = '';
+    this.inventory.forEach((k, idx) => {
+      const def = POWERUPS[k];
+      const el = document.createElement('div');
+      el.className = 'pu-icon ' + def.cls;
+      el.textContent = def.icon;
+      el.title = def.name;
+      el.addEventListener('click', e => { e.stopPropagation(); this._activatePower(idx); });
+      el.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); this._activatePower(idx); });
+      bar.appendChild(el);
+    });
+    if (this.inventory.length === 0) {
+      document.getElementById('gold').classList.remove('has-powerups');
+    }
+  }
+
+  _collectPowerUps() {
+    // Tapping gold — instantly attract all floating power-ups
+    this.powerUps.forEach(pu => {
+      this.inventory.push(pu.key);
+      pu.sp.destroy(); pu.alive = false;
+    });
+    this.powerUps = [];
+    if (this.inventory.length > 0) {
+      SFX.powerUp();
+      this._renderInventory();
+    }
+    // Also if any "use-on-tap" type and only meteor is in inventory, prompt activation
+    // (We already use icons for that.)
+  }
+
+  _activatePower(idx) {
+    const key = this.inventory[idx];
+    if (!key) return;
+    const def = POWERUPS[key];
+    this.inventory.splice(idx, 1);
+    SFX.powerUp();
+
+    switch (key) {
+      case 'rapid':
+        this.activePowers.rapid = this.time.now + def.dur;
+        this._floatText(MAP_W/2, MAP_H/2, '🔥 RAPID FIRE!', '#ff6644');
+        break;
+      case 'shield':
+        this.activePowers.shield = this.time.now + def.dur;
+        this.shieldBuffer = 3;
+        this._floatText(MAP_W/2, MAP_H/2, '🛡️ SHIELD!', '#44ddff');
+        break;
+      case 'nova':
+        this.activePowers.nova = this.time.now + def.dur;
+        this._floatText(MAP_W/2, MAP_H/2, '⚡ CHAIN NOVA!', '#ffdd44');
+        break;
+      case 'meteor':
+        this.meteorMode = true;
+        const mi = document.getElementById('modeIndicator');
+        mi.style.display = 'block';
+        mi.textContent = '☄️ Tap a cell to strike';
+        this._floatText(MAP_W/2, MAP_H/2, '☄️ SELECT TARGET', '#ff8844');
+        // Note: meteor was consumed from inventory; if user cancels we re-add
+        this._meteorReadd = key;
+        break;
+      case 'decay':
+        this.enemies.forEach(e => {
+          if (!e.alive) return;
+          const dmg = Math.floor(e.maxHp * 0.2);
+          this._hit(e, dmg);
+        });
+        this._floatText(MAP_W/2, MAP_H/2, '💀 DECAY!', '#aa66ff');
+        break;
+    }
+    this._renderInventory();
+  }
+
+  _fireMeteor(col, row) {
+    this.meteorMode = false;
+    this._meteorReadd = null;
+    document.getElementById('modeIndicator').style.display = 'none';
+    const x = col*CELL+CELL/2, y = row*CELL+CELL/2;
+    // Big explosion
+    this.cameras.main.shake(400, 0.01);
+    SFX.explosion();
+    const ring = this.add.image(x, y, 'ring').setDepth(7).setTint(0xff8844).setScale(0.1);
+    this.tweens.add({targets:ring, scale:5, alpha:0, duration:700, ease:'Power2', onComplete:()=>ring.destroy()});
+    const radius = CELL * 3;
+    this.enemies.forEach(e => {
+      if (!e.alive) return;
+      if (Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) this._hit(e, 100);
+    });
+    this._particles(x, y, 0xff8844, 30, 150);
+    this._floatText(x, y-30, '☄️ METEOR!', '#ff8844');
+  }
+
+  // ---------- EFFECTS ----------
+  _particles(x, y, col, count, speed) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random()*Math.PI*2, spd = speed*(0.5+Math.random());
+      const p = this.add.image(x,y,'spark').setDepth(5).setTint(col).setScale(0.4+Math.random()*0.6);
+      this.tweens.add({targets:p, x:x+Math.cos(angle)*spd, y:y+Math.sin(angle)*spd,
+        alpha:0, scaleX:0, scaleY:0, duration:300+Math.random()*400, ease:'Power2',
+        onComplete:()=>p.destroy()});
+    }
+  }
+
+  _floatText(x, y, text, color, isDmg=false) {
+    const c = typeof color === 'number' ? '#'+color.toString(16).padStart(6,'0') : color;
+    const t = this.add.text(x,y,text,{fontSize: isDmg?'12px':'13px',
+      fontFamily:'Segoe UI,system-ui,sans-serif',
+      color:c, fontStyle:'bold', stroke:'#000', strokeThickness:2
+    }).setOrigin(0.5).setDepth(8).setScale(0.5);
+    this.tweens.add({targets:t, scale:1.2, duration:120, ease:'Back.out',
+      onComplete: () => {
+        this.tweens.add({targets:t, y:y-40, alpha:0, scale:1, duration:600, ease:'Cubic.out', onComplete:()=>t.destroy()});
+      }
+    });
+  }
+
+  // ---------- GAME STATE ----------
+  _begin() {
+    SFX.init();
+    document.getElementById('startScreen').style.display = 'none';
+    this.gameStarted = true;
+    // === STEP 20: Show tutorial on first game ===
+    if (!localStorage.getItem('NEON_TUTORIAL_DONE')) {
+      TUTORIAL.show();
+    }
+    this.goldStartTime = this.time.now;
+    if (this._canvas) { this._canvas.style.visibility = 'visible'; }
+    this._updateWavePreview();
+  }
+  _gameOver() {
+    this.gameOver = true;
+    const isSurvival = this.wave >= 26;
+    document.getElementById('finalWave').textContent = this.wave;
+    document.getElementById('finalTowers').textContent = this.towersBuilt;
+    document.getElementById('finalKills').textContent = this.enemiesKilled;
+    
+    // Update game over screen title based on whether they reached survival waves
+    const goTitle = document.querySelector('#gameOverScreen h1');
+    if (goTitle) {
+      goTitle.textContent = isSurvival ? 'SURVIVAL FAILED' : 'GAME OVER';
+    }
+    
+    const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
+    const bestEl = document.getElementById('finalBest');
+    if (bestEl) {
+      bestEl.textContent = `Score: ${res.score} · Best wave: ${res.rec.bestWave} · Best score: ${res.rec.bestScore}`;
+      if (res.beat) { bestEl.classList.add('new-record'); bestEl.textContent = `🏅 NEW RECORD! Score ${res.score} (best wave ${res.rec.bestWave})`; }
+    }
+    document.getElementById('gameOverScreen').style.display = 'flex';
+    if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
+  }
+  _win() {
+    this.gameOver = true;
+    const survivedAll = this.wave >= 30;
+    document.getElementById('winTowers').textContent = this.towersBuilt;
+    document.getElementById('winKills').textContent = this.enemiesKilled;
+    document.getElementById('winLives').textContent = this.lives;
+    
+    // Update win screen based on whether they completed survival waves
+    const winTitle = document.querySelector('#winScreen h1');
+    if (winTitle) {
+      winTitle.textContent = survivedAll ? '🏆 VICTORY - ALL 30 WAVES!' : '🏆 VICTORY!';
+    }
+    const winStats = document.querySelector('#winScreen .stats');
+    if (winStats) {
+      winStats.innerHTML = survivedAll 
+        ? 'All 30 Waves Cleared!<br>'
+        : 'All 25 Waves Cleared!<br>';
+      winStats.innerHTML += `Towers: <span id="winTowers">${this.towersBuilt}</span> · Kills: <span id="winKills">${this.enemiesKilled}</span><br>`;
+      winStats.innerHTML += `Lives Left: <span id="winLives">${this.lives}</span>`;
+    }
+    
+    const res = HIGHSCORE.submit(this.wave, this.enemiesKilled, Math.max(0,this.lives), this.towersBuilt);
+    const bestEl = document.getElementById('winBest');
+    if (bestEl) {
+      bestEl.textContent = `Score: ${res.score} · Best score: ${res.rec.bestScore}`;
+      if (res.beat) { bestEl.classList.add('new-record'); bestEl.textContent = `🏅 NEW RECORD! Score ${res.score}`; }
+    }
+    document.getElementById('winScreen').style.display = 'flex';
+    if (this._canvas) { this._canvas.style.visibility = 'hidden'; this._canvas.style.pointerEvents = 'none'; }
+  }
+
+  _toggleSpeed() {
+    this.gameSpeed = this.gameSpeed === 1 ? 2 : 1;
+    document.getElementById('speedToggle').textContent = `⏩ ${this.gameSpeed}x`;
+  }
+
+  _updateWavePreview() {
+    const el = document.getElementById('wavePreview');
+    if (this.waveActive || this.wave >= TOTAL_WAVES) { el.style.display = 'none'; return; }
+    
+    const next = getWaveEnemies(this.wave + 1);
+    const counts = {};
+    next.forEach(t => counts[t] = (counts[t]||0) + 1);
+    
+    // Calculate total HP for the wave (player can gauge difficulty)
+    let totalHp = 0;
+    let totalReward = 0;
+    Object.entries(counts).forEach(([type, count]) => {
+      const def = ENEMY_DEFS[type];
+      const hp = getEnemyHp(this.wave + 1, type);
+      totalHp += hp * count;
+      totalReward += def.reward * count;
+    });
+    
+    // Build detailed preview with enemy names, icons, HP, and gold reward
+    let previewHtml = '<span style="color:#88ddff;font-size:8px;font-weight:700;">NEXT WAVE:</span><br>';
+    previewHtml += '<span style="color:#aab;font-size:7px;">';
+    
+    Object.entries(counts).forEach(([type, count]) => {
+      const def = ENEMY_DEFS[type];
+      const hp = getEnemyHp(this.wave + 1, type);
+      const hpBar = Math.min(100, Math.floor(hp / 10)); // Scale HP to 0-100 for visual
+      const barColor = hp > 100 ? '#ff4444' : hp > 50 ? '#ffaa22' : '#44ff88';
+      
+      previewHtml += `<div style="display:flex;align-items:center;gap:2px;margin:1px 0;">
+        <span style="font-size:10px;">${def.icon}</span>
+        <span style="color:${barColor};font-size:7px;font-weight:600;">${def.name}</span>
+        <span style="color:#888;font-size:6px;">x${count}</span>
+        <span style="color:#888;font-size:6px;">HP${hp}</span>
+        <span style="color:#ffcc00;font-size:6px;">💰${def.reward * count}</span>
+      </div>`;
+    });
+    
+    previewHtml += `</span>`;
+    previewHtml += `<div style="color:#88ddff;font-size:7px;font-weight:700;margin-top:2px;">`;
+    previewHtml += `Total: ${next.length} enemies · ${totalHp} HP · 💰${totalReward}`;
+    previewHtml += `</div>`;
+    
+    el.innerHTML = previewHtml;
+    el.style.display = 'block';
+  }
+
+  _updateHUD() {
+    document.getElementById('livesVal').textContent = this.lives;
+    document.getElementById('goldVal').textContent = this.gold;
+    document.getElementById('waveVal').textContent = this.wave;
+    const kEl = document.getElementById('killsVal');
+    if (kEl) kEl.textContent = this.enemiesKilled;
+    this.redrawCoreBar();
+    this._updateBtnStates();
+    if (this._updateSellAllBtn) this._updateSellAllBtn();
+
+    // Combo display
+    const comboEl = document.getElementById('combo');
+    const comboVal = document.getElementById('comboVal');
+    if (this.combo > 1) {
+      comboEl.classList.add('active');
+      comboVal.textContent = `COMBO x${this.combo}`;
+      let col = '#44ff88';
+      if (this.combo >= 10) col = '#ffffff';
+      else if (this.combo >= 7) col = '#ff4466';
+      else if (this.combo >= 5) col = '#ff8844';
+      else if (this.combo >= 3) col = '#ffdd44';
+      comboEl.style.color = col;
+    } else {
+      comboEl.classList.remove('active');
+    }
+  }
+  updateHUD() { this._updateHUD(); }
+
+  _updateBtnStates() {
+    document.querySelectorAll('.tower-btn').forEach(b => {
+      const d = TOWER_DEFS[b.dataset.type];
+      b.classList.toggle('disabled', this.gold < d.cost);
+    });
+  }
+
+  // ---------- MAIN LOOP ----------
+  update(time, delta) {
+    if (!this.gameStarted || this.gameOver) return;
+    // Cache per-frame delta — Phaser 3.80.1 does NOT expose actualDelta;
+    // use the delta arg passed to update() instead.
+    this._frameDelta = delta;
+    this._updateEnemies();
+    this._updateTowers();
+    this._updateProjectiles();
+    this._updatePowerUps();
+
+    // Continuously redraw core bar for pulse animation when lives are low
+    if (this.lives <= 7 && this.lives > 0) this.redrawCoreBar();
+
+    // Combo decay
+    if (this.combo > 0 && time - this.lastKillTime > 2000) {
+      this.combo = 0;
+      this._updateHUD();
+    }
+
+    // Expire active powers
+    let dirty = false;
+    Object.keys(this.activePowers).forEach(k => {
+      if (this.activePowers[k] < time) {
+        delete this.activePowers[k];
+        if (k === 'shield') this.shieldBuffer = 0;
+        dirty = true;
+      }
+    });
+    if (dirty) this._renderInventory();
+
+    // GPS update every second
+    if (time - this.lastGpsUpdate > 1000) {
+      this.lastGpsUpdate = time;
+      const elapsed = Math.max(1, (time - this.goldStartTime)/1000);
+      const gps = this.gameStarted && this.wave > 0 ? (this.goldEarned / elapsed) : 0;
+      document.getElementById('gps').textContent = gps > 0 ? `(${gps.toFixed(1)}/s)` : '';
+    }
+
+    // Auto-start countdown
+    if (this.autoStartTimer > 0 && !this.waveActive && !this.gameOver && this.wave < TOTAL_WAVES) {
+      this.autoStartTimer -= delta;
+      const secs = Math.max(0, Math.ceil(this.autoStartTimer/1000));
+      document.getElementById('countdown').textContent = `Auto-start in ${secs}s`;
+      if (this.autoStartTimer <= 0) {
+        document.getElementById('countdown').style.display = 'none';
+        this._startWave();
+      }
+    }
+  }
+}
+
+const config = {
+  type: Phaser.AUTO,
+  backgroundColor: '#0a0a1a',
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  parent: 'phaserWrap',
+  physics: { default:'arcade', arcade:{debug:false} },
+  scene:[GameScene],
+  render:{antialias:true, pixelArt:false},
+};
+
+// Handle window resize - recalculate grid and restart scene
+window.addEventListener('resize', () => {
+  calcGrid();
+  if (window._gameScene) {
+    window._gameScene.scene.restart();
+  }
+});
+
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
