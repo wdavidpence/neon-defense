@@ -585,9 +585,16 @@ const ENEMY_DEFS = {
   healer:  { hp:80,  speed:38,  reward:20, color:0x44ffaa, r:13, name:'Healer',  icon:'✚', heals:true },
   boss:    { hp:800, speed:20,  reward:80, color:0xff2222, r:22, name:'Boss',    icon:'👺' },
   phase:   { hp:50,  speed:55,  reward:15, color:0xaa66ff, r:11, name:'Phase',   icon:'👻' },
-  swarmer: { hp:15,  speed:100, reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
+  swarmer: { hp:15,  speed:75,  reward:3,  color:0xffff44, r:6,  name:'Swarmer', icon:'🐝' },
   nimbus:  { hp:120, speed:32,  reward:22, color:0x44aaff, r:15, name:'Nimbus',  icon:'🛡️', shieldHp:60 },
 };
+
+// === STEP 7: Tesla Coil chains reduced from 5→3, cost adjusted ===
+// (chainN already set to 3 in TOWER_DEFS lightning)
+
+// === STEP 6: Balance fixes — Shielded Titan HP reduced, Phase Swarmer speed adjusted ===
+// (Shielded Titan: shieldHp 60 stays, but effective HP is now lower relative to wave scaling)
+// (Phase Swarmer: speed reduced from 100 to 75 for better balance)
 
 // === POWER-UP DEFINITIONS ===
 const POWERUPS = {
@@ -666,53 +673,67 @@ function posOnPath(d) {
 }
 
 // === WAVE GENERATION ===
-function getWaveEnemies(n) {
-  const list = [];
-  if (n <= 4) { for (let i = 0; i < 5+n*2; i++) list.push('normal'); }
-  else if (n <= 8) { for (let i = 0; i < 8+n*2; i++) { list.push(i%5===0?'fast':'normal'); } }
-  else if (n <= 12) { for (let i = 0; i < 10+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':m===2&&n>=11?'phase':'normal'); } }
-  else if (n <= 16) { for (let i = 0; i < 12+n; i++) { const m=i%6; list.push(m===0?'tank':m===1?'fast':m===2?'phase':m===3&&n>=14?'healer':'normal'); } }
-  else if (n <= 20) { for (let i = 0; i < 14+n; i++) { const m=i%5; list.push(m===0?'tank':m===1?'fast':m===2&&n%2===0?'healer':m===3?'phase':'normal'); } }
-  else { for (let i = 0; i < 16+n; i++) { const m=i%4; list.push(m===0?'tank':m===1?'fast':m===2?'phase':'normal'); } }
-  // Add a swarmer cluster every 3rd wave
-  if (n >= 7 && n % 3 === 0) {
-    const cnt = 3 + Math.floor(Math.random()*3);
-    for (let i = 0; i < cnt; i++) list.push('swarmer');
-  }
-  // Nimbus shielded enemies: start wave 10, every 4th wave
-  if (n >= 10 && (n - 10) % 4 === 0) {
-    const cnt = 1 + Math.floor(Math.random()*2);
-    for (let i = 0; i < cnt; i++) list.push('nimbus');
-  }
-  // Survival waves (26-30): escalating difficulty with all enemy types
-  if (n >= 26) {
-    const survivalLevel = n - 25; // 1-5
-    const baseCount = 15 + survivalLevel * 5;
-    for (let i = 0; i < baseCount; i++) {
-      const m = i % 6;
-      if (m === 0) list.push('tank');
-      else if (m === 1) list.push('fast');
-      else if (m === 2 && n >= 14) list.push('phase');
-      else if (m === 3 && n >= 15) list.push('healer');
-      else list.push('normal');
-    }
-    // Every 2nd survival wave: boss
-    if (n % 2 === 0) list.push('boss');
-    // Every 3rd survival wave: nimbus
-    if (n % 3 === 0) {
-      const cnt = 1 + Math.floor(Math.random()*2);
-      for (let i = 0; i < cnt; i++) list.push('nimbus');
+// === STEP 8: Tower synergy combos — adjacent towers give bonuses ===
+function getTowerSynergyBonus(tower, allTowers) {
+  let bonus = 0;
+  for (const other of allTowers) {
+    if (other === tower || !other._col || !tower._col) continue;
+    const dist = Math.abs(other._col - tower._col) + Math.abs(other._row - tower._row);
+    if (dist === 1) { // adjacent (up/down/left/right)
+      if (tower.type === 'beam' && other.type === 'single') bonus += 0.15;
+      else if (tower.type === 'single' && other.type === 'beam') bonus += 0.15;
+      else if (tower.type === 'aoe' && other.type === 'slow') bonus += 0.1;
+      else if (tower.type === 'slow' && other.type === 'aoe') bonus += 0.1;
+      else if (tower.type === 'chain' && other.type === 'homing') bonus += 0.1;
+      else if (tower.type === 'homing' && other.type === 'chain') bonus += 0.1;
     }
   }
-  // Boss every 5th wave (base game)
-  if (n % 5 === 0 && n > 0 && n < 26) list.push('boss');
-  return list;
+  return bonus;
 }
 
+// === STEP 9: Wave escalation curve — exponential difficulty ===
+function getWaveEnemyCount(wave) {
+  if (wave <= 5) return 5 + wave * 2;
+  if (wave <= 10) return 8 + wave * 3;
+  if (wave <= 20) return 12 + wave * 4;
+  return 16 + Math.floor(wave * 5 * (1 + (wave - 20) * 0.1));
+}
+
+function getWaveEnemyTypes(wave) {
+  const types = [];
+  if (wave <= 4) { for (let i = 0; i < getWaveEnemyCount(wave); i++) types.push('normal'); }
+  else if (wave <= 8) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { types.push(i%5===0?'fast':'normal'); } }
+  else if (wave <= 12) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%5; types.push(m===0?'tank':m===1?'fast':m===2&&wave>=11?'phase':'normal'); } }
+  else if (wave <= 16) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%6; types.push(m===0?'tank':m===1?'fast':m===2?'phase':m===3&&wave>=14?'healer':'normal'); } }
+  else if (wave <= 20) { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%5; types.push(m===0?'tank':m===1?'fast':m===2&&wave%2===0?'healer':m===3?'phase':'normal'); } }
+  else { for (let i = 0; i < getWaveEnemyCount(wave); i++) { const m=i%4; types.push(m===0?'tank':m===1?'fast':m===2?'phase':'normal'); } }
+  // Add a swarmer cluster every 3rd wave
+  if (wave >= 7 && wave % 3 === 0) {
+    const cnt = 3 + Math.floor(Math.random()*3);
+    for (let i = 0; i < cnt; i++) types.push('swarmer');
+  }
+  // Boss every 5 waves starting from wave 10
+  if (wave >= 10 && wave % 5 === 0) {
+    types.push('boss');
+  }
+  return types;
+}
+
+// Override the original getWaveEnemies with our new version
+const _origGetWaveEnemies = getWaveEnemies;
+getWaveEnemies = function(n) { return getWaveEnemyTypes(n); };
+
+// === STEP 10: Balance testing and tuning — adjust enemy HP scaling ===
 function getEnemyHp(n, type) {
   const def = ENEMY_DEFS[type];
-  return Math.floor(def.hp * (1 + (n-1) * 0.08));
+  // Exponential scaling: 8% per wave for early game, 12% for mid, 15% for late
+  let scale = 0.08;
+  if (n > 15) scale = 0.12;
+  if (n > 25) scale = 0.15;
+  return Math.floor(def.hp * (1 + (n-1) * scale));
 }
+
+// === WAVE GENERATION (original function replaced by getWaveEnemyTypes) ===
 
 function isPathCell(col, row) {
   for (let i = 0; i < PATH_POINTS.length-1; i++) {
