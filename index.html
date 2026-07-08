@@ -347,17 +347,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Retry _begin() until the Phaser scene is ready (handles slow load on mobile/Telegram WebView)
     function tryBegin(attempts) {
       if (window._gameScene && window._gameScene._begin) {
+        console.log('[NeonDefense] Scene ready, calling _begin()');
         window._gameScene._begin();
         return;
       }
-      if (attempts > 50) {
-        // Give up after 5s — at least make canvas visible
+      if (attempts > 300) {
+        // Give up after 30s — show error if canvas never appeared
         const cv = document.querySelector('canvas');
-        if (cv) cv.style.visibility = 'visible';
+        if (cv) {
+          cv.style.visibility = 'visible';
+          console.warn('[NeonDefense] Phaser scene not ready after 30s, canvas visible but _begin() not called');
+        } else {
+          console.error('[NeonDefense] Phaser failed to initialize canvas after 30s');
+        }
         return;
       }
       setTimeout(() => tryBegin(attempts + 1), 100);
     }
+    console.log('[NeonDefense] Waiting for scene to be ready...');
     tryBegin(0);
   });
   ['restartBtn','restartBtn2'].forEach(id => {
