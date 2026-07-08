@@ -1268,12 +1268,13 @@ class GameScene extends Phaser.Scene {
     if (t.aoeR) t.aoeR = Math.floor(d.aoeR * (1+(t.level-1)*0.18));
     if (t.beamW) t.beamW = d.beamW + (t.level-1);
 
-    // Enhanced visual feedback: larger particle burst + level indicator on body
+    // STEP 13: Enhanced upgrade sequence — multi-stage visual feedback
+    // Stage 1: Golden particle burst (already exists)
     const partCount = 18 + t.level * 4;
     this._particles(t.x, t.y, 0xffdd00, partCount, 90);
     this._floatText(t.x, t.y - 25, `UPGRADE! LV${t.level}`, '#ffdd00');
     
-    // Add level indicator text on the tower body (persistent)
+    // Stage 2: Level indicator text on tower body (persistent)
     if (t.levelText) t.levelText.destroy();
     const levelText = this.add.text(t.x, t.y + CELL * 0.35, t.level.toString(), {
       fontSize: Math.max(8, CELL * 0.22) + 'px',
@@ -1285,7 +1286,7 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6);
     t.levelText = levelText;
     
-    // Pulsing glow ring around tower to draw attention
+    // Stage 3: Pulsing glow ring around tower (already exists)
     const glowRing = this.add.circle(t.x, t.y, t.range, d.color, 0.08).setDepth(2).setStrokeStyle(1, d.color, 0.3);
     this.tweens.add({
       targets: glowRing,
@@ -1296,29 +1297,36 @@ class GameScene extends Phaser.Scene {
       onComplete: () => glowRing.destroy()
     });
     
-    // Scale bounce on tower body
+    // Stage 4: Scale bounce on tower body (already exists)
     this.tweens.add({
-      targets: t.body,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      duration: 100,
+      targets: t.sp,
+      scale: 1.2,
+      duration: 150,
+      ease: 'Power2',
       yoyo: true,
-      ease: 'Power2'
+      onComplete: () => t.sp.setScale(d.r / 12)
     });
+
+    // Stage 5: Damage/range stats popup (NEW)
+    const statsText = this.add.text(t.x, t.y + CELL * 0.5, 
+      `DMG:${t.damage} RNG:${t.range}`, {
+        fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
+        stroke: '#000000', strokeThickness: 2
+      }).setOrigin(0.5).setDepth(6);
     this.tweens.add({
-      targets: t.turret,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      duration: 100,
-      yoyo: true,
-      ease: 'Power2'
+      targets: statsText,
+      y: t.y + CELL * 0.3,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => statsText.destroy()
     });
-    
+
     this._updateHUD();
-    if (this.selectedTower === t) this._showTooltip(t, {x:t.x, y:t.y});
   }
 
   _sellSelected() { if (this.selectedTower) this._sellTower(this.selectedTower); }
+  _showTooltip(tower, pointer) {
   _sellAllTowers() {
     if (this.waveActive || this.gameOver || this.towers.length === 0) return;
     // iterate copy
@@ -1408,6 +1416,28 @@ class GameScene extends Phaser.Scene {
     this.waveActive = true;
     this.autoStartTimer = 0;
     document.getElementById('countdown').style.display = 'none';
+
+    // STEP 14: Wave transition effects — dramatic intro
+    const waveIntro = this.add.text(MAP_W/2, MAP_H/2 - 40, `WAVE ${this.wave}`, {
+      fontSize: '56px', fontFamily: 'monospace', color: '#00ff88',
+      stroke: '#004422', strokeThickness: 6, fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(10);
+
+    // Pulsing glow on wave text
+    this.tweens.add({
+      targets: waveIntro, scale: 1.15, duration: 400, yoyo: true, repeat: 2,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: waveIntro, alpha: 0, scale: 2.5, duration: 600, ease: 'Power3',
+          onComplete: () => waveIntro.destroy()
+        });
+      }
+    });
+
+    // Screen flash on wave start (subtle green)
+    const introFlash = this.add.rectangle(MAP_W/2, MAP_H/2, MAP_W, MAP_H, 0x00ff88, 0.1).setDepth(9);
+    this.tweens.add({ targets: introFlash, alpha: 0, duration: 400, onComplete: () => introFlash.destroy() });
 
     const types = getWaveEnemies(this.wave);
     this.spawnQueue = [];
@@ -1654,19 +1684,42 @@ class GameScene extends Phaser.Scene {
     this.enemiesKilled++;
 
     SFX.death();
-    this.cameras.main.shake(80, 0.003);
-    // Particle variety by enemy type
-    const partCounts = { boss:25, tank:15, healer:6, swarmer:6, fast:8, phase:8, normal:10, nimbus:14 };
-    const pc = partCounts[e.type] || 10;
-    this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, pc, 60);
+
+    // STEP 12: Enhanced death animations — explosion + screen shake
+    const partCounts = { boss:35, tank:20, healer:8, swarmer:8, fast:10, phase:10, normal:12, nimbus:16 };
+    const pc = partCounts[e.type] || 12;
+
+    // Death explosion — expanding ring + particle burst
+    const deathRing = this.add.circle(e.x, e.y, 5, ENEMY_DEFS[e.type].color, 0.8).setDepth(6);
+    this.tweens.add({
+      targets: deathRing, scale: e.isBoss ? 6 : 3, alpha: 0, duration: 400, ease: 'Power2',
+      onComplete: () => deathRing.destroy()
+    });
+
+    // Core damage flash for boss deaths
+    if (e.isBoss) {
+      this.cameras.main.shake(400, 0.015);
+      const flash = this.add.rectangle(MAP_W/2, MAP_H/2, MAP_W, MAP_H, 0xff4400, 0.15).setDepth(8);
+      this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+    } else {
+      this.cameras.main.shake(120, 0.005);
+    }
+
+    this._particles(e.x, e.y, ENEMY_DEFS[e.type].color, pc, 70);
     this._floatText(e.x, e.y-e.radius-10, `+${e.reward}`, '#ffcc00');
     if (bonus > 0) this._floatText(e.x+15, e.y-e.radius-15, `+${bonus}`, '#ffdd44');
 
     // Power-up drop
     if (Math.random() < 0.08) this._dropPowerUp(e.x, e.y);
 
-    e.sp.destroy();
-    e.hbBg.destroy(); e.hbFill.destroy();
+    // STEP 12: Death animation — shrink + fade out
+    if (e.sp) {
+      this.tweens.add({
+        targets: e.sp, scale: 0, alpha: 0, duration: 350, ease: 'Power2',
+        onComplete: () => { e.sp.destroy(); }
+      });
+    }
+
     this.enemies.splice(i,1);
     this.enemiesRemaining--;
     if (e.isBoss) this.bossList = this.bossList.filter(b=>b!==e);
@@ -1790,7 +1843,26 @@ class GameScene extends Phaser.Scene {
       homing:(tower.type === 'homing'),
       type:tower.type,
     });
+
+    // STEP 11: Muzzle flash — bright burst at tower position on each shot
     const ang = Phaser.Math.Angle.Between(tower.x,tower.y,target.x,target.y);
+    const flash = this.add.circle(
+      tower.x + Math.cos(ang)*18, tower.y + Math.sin(ang)*18, 6,
+      TOWER_DEFS[tower.key].color, 1.0
+    ).setDepth(5);
+    this.tweens.add({
+      targets: flash, scale: 2.5, alpha: 0, duration: 120, ease: 'Power2',
+      onComplete: () => flash.destroy()
+    });
+
+    // STEP 13 (partial): Tower recoil — slight push back on fire
+    this.tweens.add({
+      targets: tower.sp,
+      x: tower.x - Math.cos(ang)*3, y: tower.y - Math.sin(ang)*3,
+      duration: 50, ease: 'Power2',
+      yoyo: true, onComplete: () => { tower.sp.setPosition(tower.x, tower.y); }
+    });
+
     this._particles(tower.x+Math.cos(ang)*15, tower.y+Math.sin(ang)*15,
                      TOWER_DEFS[tower.key].color, 3, 20);
   }
