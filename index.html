@@ -874,9 +874,7 @@ const TUTORIAL = {
   },
   reset() { this.currentStep = 0; }
 };
-// Override the original getWaveEnemies with our new version
-const _origGetWaveEnemies = getWaveEnemies;
-getWaveEnemies = function(n) { return getWaveEnemyTypes(n); };
+function getWaveEnemies(n) { return getWaveEnemyTypes(n); }
 
 // === STEP 10: Balance testing and tuning — adjust enemy HP scaling ===
 function getEnemyHp(n, type) {
@@ -2573,7 +2571,28 @@ window.addEventListener('resize', () => {
   }
 });
 
-const game = new Phaser.Game(config);
+let game;
+try {
+  game = new Phaser.Game(config);
+  window._phaserGame = game;
+  console.log('[NeonDefense] Phaser.Game created');
+} catch (err) {
+  console.error('[NeonDefense] Failed to create Phaser.Game', err);
+  const startScreen = document.getElementById('startScreen');
+  if (startScreen) {
+    startScreen.style.display = 'flex';
+    startScreen.innerHTML = `
+      <h1>NEON DEFENSE</h1>
+      <div class="subtitle">⚡ Game Engine Crash ⚡</div>
+      <p style="color:#ff4466; margin:20px 0; padding:15px; background:rgba(255,68,102,0.1); border-radius:8px;">
+        Phaser failed to create the game canvas.<br>
+        Open the console for details.
+      </p>
+    `;
+  }
+}
+
+window.GameScene = GameScene;
 </script>
 </body>
 </html>
