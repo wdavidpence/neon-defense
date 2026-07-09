@@ -354,13 +354,13 @@ const SFX = {
     if (this.quality === 'low') return; // Skip noise for low quality
     this._noise(0.35, 250, 0.6); 
   },
-  toggle() { this.muted = !this.muted; return this.muted; }
+  toggle() { this.muted = !this.muted; return this.muted; },
   cycleQuality() {
     const qualities = ['low', 'med', 'high'];
     const idx = qualities.indexOf(this.quality);
     this.quality = qualities[(idx + 1) % qualities.length];
     return this.quality;
-  }
+  },
   getQualityLabel() {
     const labels = { low: '🔊 Low', med: '🔊 Med', high: '🔊 High' };
     return labels[this.quality] || labels.high;
@@ -1481,7 +1481,6 @@ class GameScene extends Phaser.Scene {
   }
 
   _sellSelected() { if (this.selectedTower) this._sellTower(this.selectedTower); }
-  _showTooltip(tower, pointer) {
   _sellAllTowers() {
     if (this.waveActive || this.gameOver || this.towers.length === 0) return;
     // iterate copy
