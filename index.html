@@ -190,6 +190,9 @@ const PATH_TEMPLATES = [
   [[0,12],[3,12],[3,3],[6,3],[6,13],[9,13],[9,6],[12,6]],
   [[0,2],[2,2],[2,10],[6,10],[6,2],[10,2],[10,14],[4,14],[4,16]],
   [[0,16],[2,16],[2,6],[5,6],[5,12],[8,12],[8,0],[12,0]],
+  [[0,1],[4,1],[4,5],[1,5],[1,11],[8,11],[8,15],[12,15]],
+  [[0,3],[3,3],[3,9],[7,9],[7,1],[11,1],[11,13],[5,13],[5,16]],
+  [[0,15],[4,15],[4,7],[9,7],[9,12],[2,12],[2,2],[12,2]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -197,7 +200,7 @@ const PATH_TEMPLATES = [
 // Missions 1-3 additionally provide an explicit deterministic sub-wave sequence;
 // the legacy wave field remains the first sub-wave for selector compatibility.
 // Missions 6-8 progress from swarm/runner pressure into armored, flying, and Bouncer disruption roles.
-// Missions after 15 intentionally use the legacy sector/path/random fallback.
+// Beta slice adds authored rush missions 16-18; missions 19+ retain legacy fallback.
 const AUTHORED_MISSIONS = {
   1:  { path: PATH_TEMPLATES[0],  startingGold:250, startingLives:20, wave:{ budget:6,   roster:['creep','creep','creep','creep','creep','creep'] }, waves:[
     { budget:6,  roster:['creep','creep','creep','creep','creep','creep'] },
@@ -275,11 +278,26 @@ const AUTHORED_MISSIONS = {
     { budget:35, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
     { budget:50, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] },
   ], reward:150 },
+  16: { path: PATH_TEMPLATES[15], startingGold:410, startingLives:15, modifier:'rush', wave:{ budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] }, waves:[
+    { budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] },
+    { budget:15, roster:['creep','creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:18, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:95 },
+  17: { path: PATH_TEMPLATES[16], startingGold:420, startingLives:15, modifier:'rush', wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] },
+    { budget:16, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:19, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:100 },
+  18: { path: PATH_TEMPLATES[17], startingGold:430, startingLives:15, modifier:'rush', wave:{ budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:105 },
 };
 
 function getPathForMission(m) {
   const authored = getMissionData(m);
-  const points = authored ? authored.path : PATH_TEMPLATES[(m - 1) % PATH_TEMPLATES.length];
+  const points = authored ? authored.path : PATH_TEMPLATES[(m - 1) % 15];
   return points.map(p => ({x: p[0]*CELL+CELL/2, y: p[1]*CELL+CELL/2}));
 }
 
@@ -311,9 +329,10 @@ function getWaveRoleSummary(wave) {
 function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
+  const modifier = getMissionData(G.mission)?.modifier === 'rush' ? 'RUSH · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
-  return label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
+  return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
 }
 
 function applyMissionBudget(m) {
@@ -1117,7 +1136,7 @@ function startWave() {
   G.spawnQueue = [];
 
   for (let i = 0; i < types.length; i++) {
-    const delay = authored ? i * 400 : (isBossMission(G.mission) ? 800 : (i * 400 + Math.random() * 200));
+    const delay = authored ? i * (authored.modifier === 'rush' ? 250 : 400) : (isBossMission(G.mission) ? 800 : (i * 400 + Math.random() * 200));
     G.spawnQueue.push({ type: types[i], delay, spawned: false });
   }
 
