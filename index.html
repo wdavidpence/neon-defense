@@ -1223,6 +1223,10 @@ function updateHUD() {
 
   const sector = getSectorForMission(G.mission);
   document.getElementById('sectorName').textContent = sector ? sector.name : 'Eta';
+  const authored = getMissionData(G.mission);
+  if (!G.waveActive && authored) {
+    document.getElementById('wavePreview').textContent = `BUDGET ${authored.wave.budget} · ${authored.wave.roster.length} threats`;
+  }
 
   updateBtnStates();
 }
