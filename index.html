@@ -5,69 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>neoDefense 1.1.2</title>
 <style>
+:root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; touch-action: none; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: #edf4ff; touch-action: none; -webkit-tap-highlight-color: transparent; }
+button { -webkit-font-smoothing: antialiased; }
 #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-#hud { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: space-around; align-items: center; padding: 6px 8px; background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; gap: 6px; pointer-events: none; }
-.hud-item { display: flex; align-items: center; gap: 4px; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 0 6px currentColor; }
-.hud-icon { font-size: 16px; }
-#lives { color: #ff4466; }
-#wave { color: #88ddff; }
-#kills { color: #ffaa44; }
-#gps { color: #88ff88; font-size: 9px; font-weight: 600; margin-left: 3px; opacity: 0.8; }
-#sector { color: #aa88ff; font-size: 10px; }
-#towerPanel { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; display: flex; gap: 3px; padding: 6px 4px 10px; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 70%, transparent 100%); justify-content: center; flex-wrap: wrap; }
-.tower-btn { min-width: 52px; padding: 4px 3px; border: 2px solid #333; border-radius: 8px; background: rgba(15,15,35,0.95); color: #fff; font-size: 9px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; transition: all 0.15s; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.tower-btn.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.06); }
-.tower-btn.disabled { opacity: 0.35; pointer-events: none; filter: grayscale(1); }
-.tower-btn .t-icon { font-size: 18px; line-height: 1; }
-.tower-btn .t-cost { color: #ffcc00; font-size: 10px; font-weight: 700; }
-.tower-btn .t-name { color: #aaa; font-size: 8px; }
-#actionBar { position: fixed; top: 40px; right: 8px; z-index: 10; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-.action-btn { padding: 6px 10px; border: 2px solid; border-radius: 6px; background: rgba(15,15,35,0.9); color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.5px; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-#startWave { border-color: #00ff88; color: #00ff88; text-shadow: 0 0 6px #00ff88; }
-#sellTower { border-color: #ff6644; color: #ff6644; text-shadow: 0 0 6px #ff6644; }
-#sellAll { border-color: #ff6644; color: #ff6644; text-shadow: 0 0 6px #ff6644; }
-#speedToggle { border-color: #44ddff; color: #44ddff; text-shadow: 0 0 6px #44ddff; }
-#muteToggle { border-color: #aaaaaa; color: #aaaaaa; padding: 4px 8px; font-size: 12px; }
-#autoUpgrade { border-color: #ffdd44; color: #ffdd44; text-shadow: 0 0 6px #ffdd44; }
-#autoUpgrade.active { background: rgba(255,221,68,0.3); box-shadow: 0 0 10px rgba(255,221,68,0.4); }
-#wavePreview { background: rgba(15,15,35,0.9); border: 1px solid #446; border-radius: 6px; padding: 4px 6px; font-size: 10px; color: #aab; max-width: 120px; }
-#laserLockBtn { border-color: #66ffff; color: #66ffff; text-shadow: 0 0 6px #66ffff; display: none; }
-#laserLockBtn.active { background: rgba(102,255,255,0.3); box-shadow: 0 0 10px rgba(102,255,255,0.4); }
-.overlay-screen { position: fixed; inset: 0; z-index: 100; background: rgba(5,5,16,0.94); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; }
-.overlay-screen h1 { font-size: 36px; margin-bottom: 6px; letter-spacing: 3px; }
-.overlay-screen .subtitle { font-size: 14px; margin-bottom: 30px; }
-.overlay-screen button { padding: 14px 40px; font-size: 18px; font-weight: 700; border: 2px solid; border-radius: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.instructions { margin-top: 24px; color: #667; font-size: 12px; text-align: center; line-height: 1.9; max-width: 320px; }
-#startScreen { background: radial-gradient(ellipse at center, #0a0a2e 0%, #050510 100%); }
-#startScreen h1 { color: #fff; text-shadow: 0 0 20px #8844ff, 0 0 40px #8844ff; }
-#startScreen .subtitle { color: #8844ff; text-shadow: 0 0 8px #8844ff; }
-#startBtn { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.12); text-shadow: 0 0 8px #00ff88; box-shadow: 0 0 16px rgba(0,255,136,0.25); }
-#gameOverScreen { display: none; }
-#gameOverScreen h1 { color: #ff4466; text-shadow: 0 0 20px #ff4466; }
-#gameOverScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
-#gameOverScreen .stats span { color: #ffcc00; font-weight: 700; }
-#winScreen { display: none; }
-#winScreen h1 { color: #00ff88; text-shadow: 0 0 20px #00ff88; }
-#winScreen .stats { color: #aab; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; }
-#winScreen .stats span { color: #ffcc00; font-weight: 700; }
-#missionSelect { display: none; background: rgba(5,5,16,0.97); overflow-y: auto; padding: 20px; }
-#missionSelect h1 { color: #fff; text-shadow: 0 0 20px #8844ff, 0 0 40px #8844ff; margin-bottom: 20px; }
-.sector-group { margin-bottom: 24px; }
-.sector-title { color: #aa88ff; font-size: 16px; font-weight: 700; margin-bottom: 8px; text-shadow: 0 0 8px #aa88ff; }
-.mission-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.mission-btn { padding: 10px 6px; border: 2px solid #333; border-radius: 8px; background: rgba(15,15,35,0.9); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; user-select: none; touch-action: manipulation; }
-.mission-btn.unlocked { border-color: #00ff88; color: #00ff88; }
-.mission-btn.completed { border-color: #44ddff; color: #44ddff; background: rgba(68,221,255,0.1); }
-.mission-btn.boss { border-color: #ff4466; color: #ff4466; }
-.mission-btn.locked { opacity: 0.3; pointer-events: none; }
-#backBtn { border-color: #8844ff; color: #8844ff; background: rgba(136,68,255,0.12); margin-top: 20px; }
-#tooltip { position: fixed; z-index: 50; pointer-events: none; display: none; background: rgba(8,8,24,0.96); border: 1px solid #446; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; min-width: 130px; }
-#tooltip .tt-name { font-weight: 700; font-size: 12px; margin-bottom: 3px; }
-#tooltip .tt-stat { color: #99a; }
-#tooltip .tt-stat span { color: #dde; font-weight: 600; }
-#tooltip .tt-action { color: #ff6644; margin-top: 5px; font-weight: 600; font-size: 9px; text-transform: uppercase; }
+#hud { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: center; align-items: center; gap: 7px; padding: max(8px, env(safe-area-inset-top)) 10px 16px; background: linear-gradient(180deg, rgba(3, 6, 20, .94), rgba(6, 10, 27, .72) 58%, transparent); font-family: 'Segoe UI', system-ui, sans-serif; pointer-events: none; }
+.hud-item { display: flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 9px; background: rgba(13, 22, 48, .72); box-shadow: inset 0 1px rgba(255,255,255,.08), 0 5px 18px rgba(0,0,0,.2); color: #fff; font-size: 12px; font-weight: 750; letter-spacing: .2px; text-shadow: 0 0 9px currentColor; }
+.hud-icon { font-size: 14px; filter: saturate(1.2); }
+#lives { color: var(--danger); } #wave { color: var(--cyan); } #kills { color: var(--amber); } #gold { color: var(--mint); }
+#gps { color: #8dffae; font-size: 9px; font-weight: 600; margin-left: 3px; opacity: .8; }
+#sector { color: var(--violet); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+#towerPanel { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; display: flex; gap: 6px; padding: 14px 8px max(12px, env(safe-area-inset-bottom)); background: linear-gradient(0deg, rgba(3, 6, 20, .98), rgba(6, 10, 27, .9) 72%, transparent); justify-content: center; flex-wrap: wrap; }
+.tower-btn { min-width: 57px; min-height: 58px; padding: 6px 5px; border: 1px solid var(--line); border-radius: 11px; background: linear-gradient(145deg, rgba(25, 38, 73, .94), rgba(8, 14, 32, .96)); color: #f4f7ff; font-size: 9px; font-weight: 650; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.28); }
+.tower-btn:active, .action-btn:active, .overlay-screen button:active, .mission-btn:active { transform: translateY(1px) scale(.98); }
+.tower-btn.selected { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(93,231,255,.35), 0 0 20px rgba(93,231,255,.35), inset 0 1px rgba(255,255,255,.2); transform: translateY(-3px); }
+.tower-btn.disabled { opacity: .35; pointer-events: none; filter: grayscale(1); }
+.tower-btn .t-icon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 5px rgba(255,255,255,.25)); }
+.tower-btn .t-cost { color: var(--amber); font-size: 10px; font-weight: 750; } .tower-btn .t-name { color: #a9b5d2; font-size: 8px; letter-spacing: .2px; }
+#actionBar { position: fixed; top: max(44px, calc(env(safe-area-inset-top) + 34px)); right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.action-btn { padding: 7px 11px; border: 1px solid; border-radius: 8px; background: linear-gradient(135deg, rgba(22, 34, 66, .94), rgba(7, 13, 30, .94)); color: #fff; font-size: 10px; font-weight: 750; cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif; text-transform: uppercase; letter-spacing: .7px; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.09), 0 5px 14px rgba(0,0,0,.25); }
+#startWave { border-color: var(--mint); color: var(--mint); text-shadow: 0 0 8px var(--mint); } #sellTower, #sellAll { border-color: var(--danger); color: var(--danger); text-shadow: 0 0 8px var(--danger); }
+#speedToggle { border-color: var(--cyan); color: var(--cyan); text-shadow: 0 0 8px var(--cyan); } #muteToggle { border-color: #9aa9c9; color: #b9c4dc; padding: 5px 9px; font-size: 12px; }
+#autoUpgrade { border-color: var(--amber); color: var(--amber); text-shadow: 0 0 8px var(--amber); } #autoUpgrade.active { background: rgba(255,209,102,.18); box-shadow: 0 0 16px rgba(255,209,102,.3); }
+#wavePreview { background: rgba(10, 18, 42, .9); border: 1px solid rgba(93,231,255,.25); border-radius: 8px; padding: 5px 8px; font-size: 10px; color: #aebbd8; max-width: 140px; box-shadow: inset 0 1px rgba(255,255,255,.06); }
+#laserLockBtn { border-color: var(--cyan); color: var(--cyan); text-shadow: 0 0 6px var(--cyan); display: none; } #laserLockBtn.active { background: rgba(93,231,255,.18); box-shadow: 0 0 16px rgba(93,231,255,.3); }
+.overlay-screen { position: fixed; inset: 0; z-index: 100; background: rgba(3, 6, 20, .92); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; font-family: 'Segoe UI', system-ui, sans-serif; }
+.overlay-screen h1 { font-size: clamp(30px, 8vw, 44px); margin-bottom: 8px; letter-spacing: clamp(2px, 1vw, 5px); font-weight: 800; }
+.overlay-screen .subtitle { font-size: 13px; margin-bottom: 32px; letter-spacing: 2px; text-transform: uppercase; }
+.overlay-screen button { padding: 14px 42px; font-size: 17px; font-weight: 750; border: 1px solid; border-radius: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.15), 0 0 24px rgba(101,255,188,.18); }
+.instructions { margin-top: 26px; color: #8390b2; font-size: 12px; text-align: center; line-height: 1.9; max-width: 320px; }
+#startScreen { background: radial-gradient(ellipse at 50% 42%, rgba(36, 30, 93, .9) 0%, rgba(10, 15, 40, .97) 42%, #030611 100%); }
+#startScreen:before { content: ''; position: absolute; width: min(74vw, 360px); height: min(74vw, 360px); border: 1px solid rgba(93,231,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(169,130,255,.035), 0 0 0 44px rgba(93,231,255,.025); pointer-events: none; }
+#startScreen h1 { color: #f4f1ff; text-shadow: 0 0 18px var(--violet), 0 0 42px rgba(169,130,255,.72); z-index: 1; } #startScreen .subtitle { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); z-index: 1; }
+#startBtn { border-color: var(--mint); color: var(--mint); background: linear-gradient(135deg, rgba(101,255,188,.18), rgba(93,231,255,.08)); text-shadow: 0 0 8px var(--mint); z-index: 1; }
+#gameOverScreen { display: none; } #gameOverScreen h1 { color: var(--danger); text-shadow: 0 0 20px var(--danger); }
+#gameOverScreen .stats, #winScreen .stats { color: #aab8d5; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; } #gameOverScreen .stats span, #winScreen .stats span { color: var(--amber); font-weight: 750; }
+#winScreen { display: none; } #winScreen h1 { color: var(--mint); text-shadow: 0 0 20px var(--mint); }
+#missionSelect { display: none; background: rgba(3, 6, 20, .97); overflow-y: auto; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); }
+#missionSelect h1 { color: #f4f1ff; text-shadow: 0 0 20px var(--violet), 0 0 40px rgba(169,130,255,.6); margin-bottom: 22px; }
+.sector-group { margin-bottom: 25px; } .sector-title { color: var(--violet); font-size: 15px; font-weight: 750; margin-bottom: 9px; text-shadow: 0 0 8px var(--violet); letter-spacing: .6px; }
+.mission-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; } .mission-btn { padding: 10px 6px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(145deg, rgba(25,38,73,.9), rgba(8,14,32,.95)); color: #dce5fa; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; user-select: none; touch-action: manipulation; box-shadow: inset 0 1px rgba(255,255,255,.07); }
+.mission-btn.unlocked { border-color: var(--mint); color: var(--mint); } .mission-btn.completed { border-color: var(--cyan); color: var(--cyan); background: rgba(93,231,255,.1); } .mission-btn.boss { border-color: var(--danger); color: var(--danger); } .mission-btn.locked { opacity: .3; pointer-events: none; }
+#backBtn { border-color: var(--violet); color: var(--violet); background: rgba(169,130,255,.12); margin-top: 20px; }
+#tooltip { position: fixed; z-index: 50; pointer-events: none; display: none; background: rgba(7, 13, 30, .96); border: 1px solid rgba(93,231,255,.35); border-radius: 9px; padding: 9px 11px; color: #edf4ff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; min-width: 140px; box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 15px rgba(93,231,255,.1); }
+#tooltip .tt-name { font-weight: 750; font-size: 12px; margin-bottom: 4px; color: var(--cyan); } #tooltip .tt-stat { color: #96a5c6; } #tooltip .tt-stat span { color: #e5edff; font-weight: 650; } #tooltip .tt-action { color: var(--danger); margin-top: 5px; font-weight: 650; font-size: 9px; text-transform: uppercase; }
+@media (max-width: 600px) { #hud { gap: 3px; padding-left: 5px; padding-right: 5px; } .hud-item { min-height: 25px; padding: 3px 5px; font-size: 10px; } .hud-icon { font-size: 12px; } #sector { font-size: 9px; } #actionBar { top: max(39px, calc(env(safe-area-inset-top) + 30px)); right: 5px; gap: 4px; } .action-btn { padding: 6px 8px; font-size: 9px; } #towerPanel { gap: 4px; padding-left: 4px; padding-right: 4px; } .tower-btn { min-width: 49px; min-height: 54px; } }
+@media (max-height: 520px) { #towerPanel { padding-top: 6px; } .tower-btn { min-height: 45px; } .tower-btn .t-icon { font-size: 17px; } .overlay-screen .subtitle { margin-bottom: 18px; } .instructions { margin-top: 16px; } }
 </style>
 </head>
 <body>
@@ -149,7 +133,7 @@ const TOWER_DEFS = {
   missile:  { name:'Missile',   icon:'🚀', cost:180, dmg:55,  range:160, fireRate:2200, color:'#ffcc00', pCol:'#ffcc00', type:'homing',  pSpeed:150, aoeR:45 },
   boomerang:{ name:'Boomerang', icon:'🔄', cost:130, dmg:20,  range:200, fireRate:1800, color:'#44ff88', pCol:'#44ff88', type:'boomerang',pSpeed:250 },
   multiRkt: { name:'Multi Rkt', icon:'🎆', cost:250, dmg:35,  range:150, fireRate:2800, color:'#aa44ff', pCol:'#aa44ff', type:'spread',  pSpeed:180, aoeR:35 },
-  booster:  { name:'Booster',   icon:'⚡', cost:120, dmg:0,   range:105, fireRate:0,    color:'#44ddff', pCol:'#44ddff', type:'booster', capacity:6, charge:2 },
+  booster:  { name:'Booster',   icon:'⚡', cost:120, dmg:0,   range:130, fireRate:99999,color:'#44ddff', pCol:'#44ddff', type:'booster', pSpeed:0,   capacity:5 },
 };
 
 // =============== ENEMY DEFINITIONS (neoDefense originals) ===============
@@ -284,6 +268,7 @@ const SFX = {
       case 'missile': this._tone(300, 600, 0.15, 'triangle', 0.4); break;
       case 'boomerang': this._tone(500, 700, 0.12, 'sine', 0.35); break;
       case 'spread': this._tone(250, 500, 0.14, 'sawtooth', 0.5); break;
+      case 'booster': this._tone(700, 1400, 0.2, 'sine', 0.3); break;
     }
   },
   death() { if (this.muted) return; this._noise(0.15, 1500, 0.4); this._tone(400, 100, 0.1, 'triangle', 0.3); },
