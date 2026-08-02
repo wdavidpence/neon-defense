@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.1.1</title>
+<title>neoDefense 1.1.2</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; touch-action: none; -webkit-tap-highlight-color: transparent; }
@@ -149,6 +149,7 @@ const TOWER_DEFS = {
   missile:  { name:'Missile',   icon:'🚀', cost:180, dmg:55,  range:160, fireRate:2200, color:'#ffcc00', pCol:'#ffcc00', type:'homing',  pSpeed:150, aoeR:45 },
   boomerang:{ name:'Boomerang', icon:'🔄', cost:130, dmg:20,  range:200, fireRate:1800, color:'#44ff88', pCol:'#44ff88', type:'boomerang',pSpeed:250 },
   multiRkt: { name:'Multi Rkt', icon:'🎆', cost:250, dmg:35,  range:150, fireRate:2800, color:'#aa44ff', pCol:'#aa44ff', type:'spread',  pSpeed:180, aoeR:35 },
+  booster:  { name:'Booster',   icon:'⚡', cost:120, dmg:0,   range:105, fireRate:0,    color:'#44ddff', pCol:'#44ddff', type:'booster', capacity:6, charge:2 },
 };
 
 // =============== ENEMY DEFINITIONS (neoDefense originals) ===============
@@ -486,6 +487,23 @@ function drawTowers() {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+
+    if (t.key === 'booster') {
+      const ratio = Math.max(0, Math.min(1, t.charge / t.capacity));
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillRect(t.x - CELL * 0.38, t.y + CELL * 0.28, CELL * 0.76, 5);
+      ctx.fillStyle = ratio > 0 ? '#44ddff' : '#556677';
+      ctx.fillRect(t.x - CELL * 0.38, t.y + CELL * 0.28, CELL * 0.76 * ratio, 5);
+      ctx.fillStyle = '#dff';
+      ctx.font = 'bold 8px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${t.charge}/${t.capacity}`, t.x, t.y - CELL * 0.35);
+    } else if (t.key === 'cannon' && !hasCannonPower(t)) {
+      ctx.fillStyle = '#ff9b88';
+      ctx.font = 'bold 8px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO BOOST', t.x, t.y - CELL * 0.35);
+    }
   });
 }
 
@@ -538,6 +556,14 @@ function drawTowerIcon(x, y, def) {
         ctx.arc(x - 8 + i * 8, y, 4, 0, Math.PI * 2);
         ctx.fill();
       }
+      break;
+    case 'booster':
+      ctx.strokeStyle = '#dff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 8, y); ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
       break;
   }
 }
@@ -901,6 +927,7 @@ function damageEnemy(enemy, damage) {
     G.enemiesKilled++;
     const goldBonus = Math.floor(enemy.reward * (1 + G.combo * 0.1));
     G.gold += goldBonus;
+    collectBoosterCharge(enemy.x, enemy.y);
 
     // Fireworks explosion!
     const colors = ['#ff3366','#ffcc00','#8844ff','#ff6644','#aa44ff','#ff3344'];
@@ -1011,6 +1038,33 @@ function winGame() {
   document.getElementById('winScreen').style.display = 'flex';
 }
 
+function getAdjacentBooster(tower) {
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+  for (const [dc, dr] of dirs) {
+    const cell = G.grid[tower.row + dr] && G.grid[tower.row + dr][tower.col + dc];
+    if (cell && cell._tower && cell._tower.key === 'booster' && cell._tower.charge > 0) return cell._tower;
+  }
+  return null;
+}
+
+function hasCannonPower(tower) {
+  return tower.key === 'cannon' && !!getAdjacentBooster(tower);
+}
+
+function refreshCannonPower() {
+  G.towers.forEach(t => { if (t.key === 'cannon') t._powered = hasCannonPower(t); });
+}
+
+function collectBoosterCharge(x, y) {
+  G.towers.forEach(t => {
+    if (t.key !== 'booster') return;
+    if (Math.hypot(t.x - x, t.y - y) <= t.range && t.charge < t.capacity) {
+      t.charge++;
+      addFloatText(t.x, t.y - 25, `+1 ENERGY ${t.charge}/${t.capacity}`, '#44ddff');
+    }
+  });
+}
+
 function placeTower(col, row, type) {
   const cell = G.grid[row][col];
   if (cell._isPath || cell._tower) return;
@@ -1031,24 +1085,12 @@ function placeTower(col, row, type) {
     aoeR: def.aoeR || 0, beamW: def.beamW || 0,
     type: def.type, pTex: 'p_' + type,
     _cannonBonus: 0, _lockedDir: null,
+    capacity: def.capacity || 0, charge: def.charge || 0, _powered: false,
   };
-
-  // Cannon Booster: check adjacent cannons
-  const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-  let bonusCount = 0;
-  for (const [dc, dr] of dirs) {
-    const nc = col + dc, nr = row + dr;
-    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && G.grid[nr][nc]._tower) {
-      if (G.grid[nr][nc]._tower.key === 'cannon') bonusCount++;
-    }
-  }
-  if (bonusCount > 0) {
-    tower.fireRate = Math.floor(tower.fireRate * (1 - bonusCount * 0.2));
-    tower._cannonBonus = bonusCount;
-  }
 
   G.towers.push(tower);
   cell._tower = tower;
+  refreshCannonPower();
 
   updateBtnStates();
   updateHUD();
@@ -1071,11 +1113,17 @@ function upgradeTower(t) {
   t.fireRate = Math.max(50, Math.floor(d.fireRate * (1 - (t.level - 1) * 0.12)));
   if (t.aoeR) t.aoeR = Math.floor(d.aoeR * (1 + (t.level - 1) * 0.18));
   if (t.beamW) t.beamW = d.beamW + (t.level - 1);
+  if (t.key === 'booster') {
+    t.capacity = d.capacity + (t.level - 1) * 2;
+    t.range = Math.floor(d.range * (1 + (t.level - 1) * 0.12));
+    t.charge = Math.min(t.capacity, t.charge + 2);
+  }
 
   // Visual feedback: fireworks particles
   spawnParticles(t.x, t.y, '#ffdd00', 20 + t.level * 5, 100);
   addFloatText(t.x, t.y - 25, `UPGRADE! LV${t.level}`, '#ffdd00');
 
+  refreshCannonPower();
   updateHUD();
 }
 
@@ -1088,6 +1136,7 @@ function sellTower(t) {
 
   if (G.selectedTower === t) { G.selectedTower = null; }
 
+  refreshCannonPower();
   updateHUD();
 }
 
@@ -1105,6 +1154,7 @@ function sellAllTowers() {
   G.towers = [];
   G.selectedTower = null;
 
+  refreshCannonPower();
   updateHUD();
 }
 
@@ -1242,6 +1292,12 @@ function gameLoop(timestamp) {
 
   // Tower firing
   G.towers.forEach(t => {
+    if (t.key === 'booster') return;
+    if (t.key === 'cannon') {
+      const booster = getAdjacentBooster(t);
+      t._powered = !!booster;
+      if (!booster) return;
+    }
     if (Date.now() - t.lastFire < t.fireRate) return;
 
     const target = findTarget(t);
@@ -1249,6 +1305,10 @@ function gameLoop(timestamp) {
 
     t.lastFire = Date.now();
     fireProjectile(t, target);
+    if (t.key === 'cannon') {
+      const booster = getAdjacentBooster(t);
+      if (booster) booster.charge = Math.max(0, booster.charge - 1);
+    }
   });
 
   // Move projectiles
