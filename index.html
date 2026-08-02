@@ -141,8 +141,10 @@ const TOWER_DEFS = {
 const ENEMY_DEFS = {
   creep:   { hp:50,  speed:48,  reward:10, color:'#ff3366', r:12, name:'Creep',   role:'swarm',   threat:1 },
   fast:    { hp:30,  speed:85,  reward:12, color:'#ffcc00', r:9,  name:'Fast',    role:'runner',  threat:2 },
-  armored: { hp:250, speed:24,  reward:30, color:'#8844ff', r:16, name:'Armored', role:'tank',    threat:4 },
-  flying:  { hp:40,  speed:55,  reward:18, color:'#88ccff', r:11, name:'Flying',  role:'flanker', threat:3 },
+  // Counter: its 50% damage reduction makes sustained fire important.
+  armored: { hp:250, speed:24,  reward:30, color:'#8844ff', r:16, name:'Armored', role:'tank',    threat:4, damageReduction:0.5 },
+  // Counter: airborne enemies can only be acquired by Laser or Missile.
+  flying:  { hp:40,  speed:55,  reward:18, color:'#88ccff', r:11, name:'Flying',  role:'flanker', threat:3, airborne:true, counterTowers:['laser','missile'] },
   bouncer: { hp:80,  speed:35,  reward:22, color:'#ff8844', r:14, name:'Bouncer', role:'disruptor', threat:5 },
   boss:    { hp:1500, speed:18, reward:150,color:'#cc0000', r:24, name:'Boss',    role:'boss',    threat:20 },
 };
@@ -892,6 +894,9 @@ function findTarget(tower) {
   for (const e of G.enemies) {
     if (!e.alive) continue;
 
+    // Airborne counterplay: only Laser and Missile can target Flying enemies.
+    if (e.type === 'flying' && !ENEMY_DEFS[e.type].counterTowers.includes(tower.key)) continue;
+
     // Laser with lock: only target in locked direction
     if (G.laserLockedTower === tower) {
       const dx = e.x - tower.x;
@@ -983,7 +988,9 @@ function fireProjectile(tower, target) {
 function damageEnemy(enemy, damage) {
   if (!enemy.alive) return;
 
-  enemy.hp -= damage;
+  // Armored's reduction is opt-in; every other enemy keeps the original damage.
+  const damageReduction = ENEMY_DEFS[enemy.type].damageReduction || 0;
+  enemy.hp -= damage * (1 - damageReduction);
 
   // Combo tracking
   const now = Date.now();
