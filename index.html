@@ -169,7 +169,7 @@ const SECTORS = [
 function getSectorForMission(m) { return SECTORS.find(s => m >= s.range[0] && m <= s.range[1]); }
 function isBossMission(m) { return [15,30,45,60,75,90].includes(m); }
 
-// =============== MAP PATHS (10 unique layouts) ===============
+// =============== MAP PATHS (15 authored layouts + legacy fallback) ===============
 const PATH_TEMPLATES = [
   [[0,14],[3,14],[3,7],[7,7],[7,3],[10,3],[10,10],[5,10],[5,12],[1,12],[1,8],[0,5]],
   [[0,0],[4,0],[4,4],[8,4],[8,8],[12,8],[12,12],[6,12],[6,16],[0,16]],
@@ -181,14 +181,50 @@ const PATH_TEMPLATES = [
   [[0,6],[3,6],[3,12],[9,12],[9,4],[12,4]],
   [[0,8],[5,2],[10,8],[5,14]],
   [[0,0],[2,0],[2,4],[6,4],[6,8],[3,8],[3,12],[7,12],[7,6],[10,6],[10,14],[5,14]],
+  [[0,16],[4,16],[4,11],[1,11],[1,4],[8,4],[8,12],[12,12]],
+  [[0,4],[5,4],[5,0],[11,0],[11,8],[7,8],[7,16],[12,16]],
+  [[0,12],[3,12],[3,3],[6,3],[6,13],[9,13],[9,6],[12,6]],
+  [[0,2],[2,2],[2,10],[6,10],[6,2],[10,2],[10,14],[4,14],[4,16]],
+  [[0,16],[2,16],[2,6],[5,6],[5,12],[8,12],[8,0],[12,0]],
 ];
 
+// Authored schema: path is a grid-point layout; wave.roster is ordered and
+// deterministic; wave.budget is the authored threat budget; rewards tune payout.
+// Missions after 15 intentionally use the legacy sector/path/random fallback.
+const AUTHORED_MISSIONS = {
+  1:  { path: PATH_TEMPLATES[0],  startingGold:250, startingLives:20, wave:{ budget:6,   roster:['creep','creep','creep','creep','creep','creep'] }, reward:25 },
+  2:  { path: PATH_TEMPLATES[1],  startingGold:250, startingLives:20, wave:{ budget:8,   roster:['creep','creep','creep','creep','fast','fast'] }, reward:30 },
+  3:  { path: PATH_TEMPLATES[2],  startingGold:260, startingLives:20, wave:{ budget:10,  roster:['creep','creep','creep','fast','fast','fast','fast'] }, reward:35 },
+  4:  { path: PATH_TEMPLATES[3],  startingGold:270, startingLives:18, wave:{ budget:14,  roster:['creep','creep','creep','fast','fast','armored'] }, reward:40 },
+  5:  { path: PATH_TEMPLATES[4],  startingGold:280, startingLives:18, wave:{ budget:16,  roster:['creep','creep','fast','fast','fast','flying','flying'] }, reward:45 },
+  6:  { path: PATH_TEMPLATES[5],  startingGold:290, startingLives:18, wave:{ budget:22,  roster:['creep','creep','fast','fast','armored','armored','bouncer'] }, reward:50 },
+  7:  { path: PATH_TEMPLATES[6],  startingGold:300, startingLives:18, wave:{ budget:26,  roster:['creep','creep','creep','fast','fast','fast','armored','flying','bouncer'] }, reward:55 },
+  8:  { path: PATH_TEMPLATES[7],  startingGold:310, startingLives:17, wave:{ budget:30,  roster:['creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] }, reward:60 },
+  9:  { path: PATH_TEMPLATES[8],  startingGold:320, startingLives:17, wave:{ budget:34,  roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:65 },
+  10: { path: PATH_TEMPLATES[9],  startingGold:330, startingLives:17, wave:{ budget:39,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] }, reward:70 },
+  11: { path: PATH_TEMPLATES[10], startingGold:340, startingLives:16, wave:{ budget:45,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:75 },
+  12: { path: PATH_TEMPLATES[11], startingGold:350, startingLives:16, wave:{ budget:52,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:80 },
+  13: { path: PATH_TEMPLATES[12], startingGold:360, startingLives:16, wave:{ budget:59,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:85 },
+  14: { path: PATH_TEMPLATES[13], startingGold:370, startingLives:15, wave:{ budget:67,  roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] }, reward:90 },
+  15: { path: PATH_TEMPLATES[14], startingGold:400, startingLives:20, wave:{ budget:90,  roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] }, reward:150 },
+};
+
 function getPathForMission(m) {
-  const idx = (m - 1) % PATH_TEMPLATES.length;
-  return PATH_TEMPLATES[idx].map(p => ({x: p[0]*CELL+CELL/2, y: p[1]*CELL+CELL/2}));
+  const authored = getMissionData(m);
+  const points = authored ? authored.path : PATH_TEMPLATES[(m - 1) % PATH_TEMPLATES.length];
+  return points.map(p => ({x: p[0]*CELL+CELL/2, y: p[1]*CELL+CELL/2}));
 }
 
-// =============== WAVE GENERATION ===============
+function getMissionData(m) { return AUTHORED_MISSIONS[m] || null; }
+
+function applyMissionBudget(m) {
+  const authored = getMissionData(m);
+  if (!authored) return;
+  G.gold = authored.startingGold;
+  G.lives = authored.startingLives;
+  G.waveBudget = authored.wave.budget;
+}
+
 function getWaveEnemyCount(mission) {
   if (mission <= 5) return 4 + mission * 2;
   if (mission <= 15) return 6 + mission * 3;
@@ -198,6 +234,9 @@ function getWaveEnemyCount(mission) {
 }
 
 function getWaveEnemyTypes(mission) {
+  const authored = getMissionData(mission);
+  if (authored) return authored.wave.roster.slice();
+
   const types = [];
   const sector = getSectorForMission(mission);
   const count = isBossMission(mission) ? Math.max(3, getWaveEnemyCount(mission) - 1) : getWaveEnemyCount(mission);
@@ -301,6 +340,7 @@ const HIGHSCORE = {
 const G = {
   gold: 250, lives: 20, mission: 1,
   waveActive: false, enemiesRemaining: 0,
+  waveBudget: 0,
   spawnQueue: [], towersBuilt: 0, enemiesKilled: 0,
   gameStarted: false, gameOver: false,
   towerSelected: null, selectedTower: null,
@@ -967,15 +1007,17 @@ function startWave() {
   if (G.waveActive || G.gameOver) return;
 
   const types = getWaveEnemyTypes(G.mission);
+  const authored = getMissionData(G.mission);
   G.spawnQueue = [];
 
   for (let i = 0; i < types.length; i++) {
-    const delay = isBossMission(G.mission) ? 800 : (i * 400 + Math.random() * 200);
+    const delay = authored ? i * 400 : (isBossMission(G.mission) ? 800 : (i * 400 + Math.random() * 200));
     G.spawnQueue.push({ type: types[i], delay, spawned: false });
   }
 
   G.spawnQueue.sort((a, b) => a.delay - b.delay);
   G.waveStartTime = Date.now();
+  G.waveBudget = authored ? authored.wave.budget : 0;
 
   SFX.waveStart();
 
@@ -992,7 +1034,8 @@ function waveComplete() {
   SFX.waveClear();
 
   // Gold bonus for completing wave
-  const goldBonus = 20 + G.mission * 5;
+  const authored = getMissionData(G.mission);
+  const goldBonus = authored ? authored.reward : 20 + G.mission * 5;
   G.gold += goldBonus;
 
   // Check if mission complete
@@ -1007,6 +1050,12 @@ function waveComplete() {
   // Next mission
   G.mission++;
   if (G.mission > 99) { winGame(); return; }
+
+  const nextMission = getMissionData(G.mission);
+  if (nextMission) {
+    G.gold = nextMission.startingGold;
+    G.lives = nextMission.startingLives;
+  }
 
   // Reload path for new mission
   loadMissionPath(G.mission);
@@ -1478,6 +1527,11 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('startScreen').style.display = 'none';
 
       G.gameStarted = true;
+      const authored = getMissionData(G.mission);
+      if (authored) {
+        G.gold = authored.startingGold;
+        G.lives = authored.startingLives;
+      }
       loadMissionPath(G.mission);
       createGrid();
       updateHUD();
@@ -1622,6 +1676,11 @@ function showMissionSelect() {
         btn.addEventListener('click', () => {
           document.getElementById('missionSelect').style.display = 'none';
           G.mission = m;
+          const authored = getMissionData(m);
+          if (authored) {
+            G.gold = authored.startingGold;
+            G.lives = authored.startingLives;
+          }
           loadMissionPath(m);
           updateHUD();
         });
