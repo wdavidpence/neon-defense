@@ -23,6 +23,7 @@ button { -webkit-font-smoothing: antialiased; }
 .tower-btn.disabled { opacity: .35; pointer-events: none; filter: grayscale(1); }
 .tower-btn .t-icon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 5px rgba(255,255,255,.25)); }
 .tower-btn .t-cost { color: var(--amber); font-size: 10px; font-weight: 750; } .tower-btn .t-name { color: #a9b5d2; font-size: 8px; letter-spacing: .2px; }
+.tower-btn .t-counter { color: var(--cyan); font-size: 7px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; margin-top: 1px; opacity: .9; }
 #actionBar { position: fixed; top: max(44px, calc(env(safe-area-inset-top) + 34px)); right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .action-btn { padding: 7px 11px; border: 1px solid; border-radius: 8px; background: linear-gradient(135deg, rgba(22, 34, 66, .94), rgba(7, 13, 30, .94)); color: #fff; font-size: 10px; font-weight: 750; cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif; text-transform: uppercase; letter-spacing: .7px; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.09), 0 5px 14px rgba(0,0,0,.25); }
 #startWave { border-color: var(--mint); color: var(--mint); text-shadow: 0 0 8px var(--mint); } #sellTower, #sellAll { border-color: var(--danger); color: var(--danger); text-shadow: 0 0 8px var(--danger); }
@@ -1635,9 +1636,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const panel = document.getElementById('towerPanel');
   Object.entries(TOWER_DEFS).forEach(([k, d]) => {
     const b = document.createElement('div');
+    const counterLabel = { cannon:'SWARM', vulcan:'RUNNER', laser:'AIR', missile:'ARMOR', boomerang:'GROUP', multiRkt:'GROUP', booster:'BUFF' }[k] || 'GENERAL';
     b.className = 'tower-btn';
     b.dataset.type = k;
-    b.innerHTML = `<div class="t-icon">${d.icon}</div><div class="t-name">${d.name}</div><div class="t-cost">💰${d.cost}</div>`;
+    b.title = `${d.name}: ${counterLabel}`;
+    b.setAttribute('aria-label', `${d.name}, ${counterLabel} counter, costs ${d.cost}`);
+    b.innerHTML = `<div class="t-icon">${d.icon}</div><div class="t-name">${d.name}</div><div class="t-counter">${counterLabel}</div><div class="t-cost">💰${d.cost}</div>`;
     b.addEventListener('click', () => selectType(k));
     panel.appendChild(b);
   });
