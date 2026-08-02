@@ -239,13 +239,42 @@ const AUTHORED_MISSIONS = {
     { budget:29, roster:['creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
     { budget:37, roster:['fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
   ], reward:60 },
-  9:  { path: PATH_TEMPLATES[8],  startingGold:320, startingLives:17, wave:{ budget:31,  roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:65 },
-  10: { path: PATH_TEMPLATES[9],  startingGold:330, startingLives:17, wave:{ budget:33,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] }, reward:70 },
-  11: { path: PATH_TEMPLATES[10], startingGold:340, startingLives:16, wave:{ budget:33,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:75 },
-  12: { path: PATH_TEMPLATES[11], startingGold:350, startingLives:16, wave:{ budget:41,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:80 },
-  13: { path: PATH_TEMPLATES[12], startingGold:360, startingLives:16, wave:{ budget:42,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:85 },
-  14: { path: PATH_TEMPLATES[13], startingGold:370, startingLives:15, wave:{ budget:48,  roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] }, reward:90 },
-  15: { path: PATH_TEMPLATES[14], startingGold:400, startingLives:20, wave:{ budget:50,  roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] }, reward:150 },
+  9:  { path: PATH_TEMPLATES[8],  startingGold:320, startingLives:17, wave:{ budget:31,  roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, waves:[
+    { budget:31, roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:35, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:38, roster:['creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:65 },
+  10: { path: PATH_TEMPLATES[9],  startingGold:330, startingLives:17, wave:{ budget:33,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] }, waves:[
+    { budget:33, roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] },
+    { budget:34, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:38, roster:['creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:70 },
+  11: { path: PATH_TEMPLATES[10], startingGold:340, startingLives:16, wave:{ budget:33,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, waves:[
+    { budget:33, roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:39, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:41, roster:['creep','fast','fast','armored','armored','armored','flying','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:75 },
+  12: { path: PATH_TEMPLATES[11], startingGold:350, startingLives:16, wave:{ budget:41,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, waves:[
+    { budget:41, roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:42, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:45, roster:['creep','fast','fast','armored','armored','armored','armored','flying','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:80 },
+  13: { path: PATH_TEMPLATES[12], startingGold:360, startingLives:16, wave:{ budget:42,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, waves:[
+    { budget:42, roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:46, roster:['creep','creep','fast','fast','armored','armored','armored','armored','flying','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:48, roster:['creep','fast','fast','armored','armored','armored','armored','flying','flying','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:85 },
+  14: { path: PATH_TEMPLATES[13], startingGold:370, startingLives:15, wave:{ budget:48,  roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] }, waves:[
+    { budget:48, roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] },
+    { budget:53, roster:['creep','creep','fast','fast','fast','armored','armored','armored','armored','flying','flying','flying','bouncer','bouncer','bouncer','bouncer'] },
+    { budget:55, roster:['creep','fast','fast','fast','armored','armored','armored','armored','flying','flying','flying','flying','bouncer','bouncer','bouncer','bouncer'] },
+  ], reward:90 },
+  // Finale arc: mixed-role pressure builds into the sector boss.
+  15: { path: PATH_TEMPLATES[14], startingGold:400, startingLives:20, wave:{ budget:50,  roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] }, waves:[
+    { budget:31, roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:35, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+    { budget:50, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] },
+  ], reward:150 },
 };
 
 function getPathForMission(m) {
