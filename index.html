@@ -213,8 +213,16 @@ const AUTHORED_MISSIONS = {
     { budget:14, roster:['creep','creep','fast','fast','fast','fast','armored'] },
     { budget:18, roster:['creep','fast','fast','fast','armored','armored','creep','fast'] },
   ], reward:35 },
-  4:  { path: PATH_TEMPLATES[3],  startingGold:270, startingLives:18, wave:{ budget:11,  roster:['creep','creep','creep','fast','fast','armored'] }, reward:40 },
-  5:  { path: PATH_TEMPLATES[4],  startingGold:280, startingLives:18, wave:{ budget:14,  roster:['creep','creep','fast','fast','fast','flying','flying'] }, reward:45 },
+  4:  { path: PATH_TEMPLATES[3],  startingGold:270, startingLives:18, wave:{ budget:11,  roster:['creep','creep','creep','fast','fast','armored'] }, waves:[
+    { budget:11, roster:['creep','creep','creep','fast','fast','armored'] },
+    { budget:14, roster:['creep','creep','fast','fast','armored','armored'] },
+    { budget:16, roster:['creep','creep','fast','armored','armored','armored'] },
+  ], reward:40 },
+  5:  { path: PATH_TEMPLATES[4],  startingGold:280, startingLives:18, wave:{ budget:14,  roster:['creep','creep','fast','fast','fast','flying','flying'] }, waves:[
+    { budget:14, roster:['creep','creep','fast','fast','fast','flying','flying'] },
+    { budget:15, roster:['creep','creep','fast','fast','flying','flying','flying'] },
+    { budget:17, roster:['creep','fast','fast','flying','flying','flying','flying'] },
+  ], reward:45 },
   6:  { path: PATH_TEMPLATES[5],  startingGold:290, startingLives:18, wave:{ budget:19,  roster:['creep','creep','fast','fast','armored','armored','bouncer'] }, reward:50 },
   7:  { path: PATH_TEMPLATES[6],  startingGold:300, startingLives:18, wave:{ budget:21,  roster:['creep','creep','creep','fast','fast','fast','armored','flying','bouncer'] }, reward:55 },
   8:  { path: PATH_TEMPLATES[7],  startingGold:310, startingLives:17, wave:{ budget:27,  roster:['creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] }, reward:60 },
