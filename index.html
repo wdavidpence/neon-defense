@@ -139,12 +139,12 @@ const TOWER_DEFS = {
 
 // =============== ENEMY DEFINITIONS (neoDefense originals) ===============
 const ENEMY_DEFS = {
-  creep:   { hp:50,  speed:48,  reward:10, color:'#ff3366', r:12, name:'Creep' },
-  fast:    { hp:30,  speed:85,  reward:12, color:'#ffcc00', r:9,  name:'Fast' },
-  armored: { hp:250, speed:24,  reward:30, color:'#8844ff', r:16, name:'Armored' },
-  flying:  { hp:40,  speed:55,  reward:18, color:'#88ccff', r:11, name:'Flying' },
-  bouncer: { hp:80,  speed:35,  reward:22, color:'#ff8844', r:14, name:'Bouncer' },
-  boss:    { hp:1500, speed:18, reward:150,color:'#cc0000', r:24, name:'Boss' },
+  creep:   { hp:50,  speed:48,  reward:10, color:'#ff3366', r:12, name:'Creep',   role:'swarm',   threat:1 },
+  fast:    { hp:30,  speed:85,  reward:12, color:'#ffcc00', r:9,  name:'Fast',    role:'runner',  threat:2 },
+  armored: { hp:250, speed:24,  reward:30, color:'#8844ff', r:16, name:'Armored', role:'tank',    threat:4 },
+  flying:  { hp:40,  speed:55,  reward:18, color:'#88ccff', r:11, name:'Flying',  role:'flanker', threat:3 },
+  bouncer: { hp:80,  speed:35,  reward:22, color:'#ff8844', r:14, name:'Bouncer', role:'disruptor', threat:5 },
+  boss:    { hp:1500, speed:18, reward:150,color:'#cc0000', r:24, name:'Boss',    role:'boss',    threat:20 },
 };
 
 // =============== POWER-UP DEFINITIONS ===============
@@ -205,23 +205,23 @@ const AUTHORED_MISSIONS = {
     { budget:11, roster:['creep','creep','fast','fast','fast','fast','creep'] },
     { budget:14, roster:['creep','fast','fast','fast','fast','armored','creep'] },
   ], reward:30 },
-  3:  { path: PATH_TEMPLATES[2],  startingGold:260, startingLives:20, wave:{ budget:10,  roster:['creep','creep','creep','fast','fast','fast','fast'] }, waves:[
-    { budget:10, roster:['creep','creep','creep','fast','fast','fast','fast'] },
+  3:  { path: PATH_TEMPLATES[2],  startingGold:260, startingLives:20, wave:{ budget:11,  roster:['creep','creep','creep','fast','fast','fast','fast'] }, waves:[
+    { budget:11, roster:['creep','creep','creep','fast','fast','fast','fast'] },
     { budget:14, roster:['creep','creep','fast','fast','fast','fast','armored'] },
     { budget:18, roster:['creep','fast','fast','fast','armored','armored','creep','fast'] },
   ], reward:35 },
-  4:  { path: PATH_TEMPLATES[3],  startingGold:270, startingLives:18, wave:{ budget:14,  roster:['creep','creep','creep','fast','fast','armored'] }, reward:40 },
-  5:  { path: PATH_TEMPLATES[4],  startingGold:280, startingLives:18, wave:{ budget:16,  roster:['creep','creep','fast','fast','fast','flying','flying'] }, reward:45 },
-  6:  { path: PATH_TEMPLATES[5],  startingGold:290, startingLives:18, wave:{ budget:22,  roster:['creep','creep','fast','fast','armored','armored','bouncer'] }, reward:50 },
-  7:  { path: PATH_TEMPLATES[6],  startingGold:300, startingLives:18, wave:{ budget:26,  roster:['creep','creep','creep','fast','fast','fast','armored','flying','bouncer'] }, reward:55 },
-  8:  { path: PATH_TEMPLATES[7],  startingGold:310, startingLives:17, wave:{ budget:30,  roster:['creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] }, reward:60 },
-  9:  { path: PATH_TEMPLATES[8],  startingGold:320, startingLives:17, wave:{ budget:34,  roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:65 },
-  10: { path: PATH_TEMPLATES[9],  startingGold:330, startingLives:17, wave:{ budget:39,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] }, reward:70 },
-  11: { path: PATH_TEMPLATES[10], startingGold:340, startingLives:16, wave:{ budget:45,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:75 },
-  12: { path: PATH_TEMPLATES[11], startingGold:350, startingLives:16, wave:{ budget:52,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:80 },
-  13: { path: PATH_TEMPLATES[12], startingGold:360, startingLives:16, wave:{ budget:59,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:85 },
-  14: { path: PATH_TEMPLATES[13], startingGold:370, startingLives:15, wave:{ budget:67,  roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] }, reward:90 },
-  15: { path: PATH_TEMPLATES[14], startingGold:400, startingLives:20, wave:{ budget:90,  roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] }, reward:150 },
+  4:  { path: PATH_TEMPLATES[3],  startingGold:270, startingLives:18, wave:{ budget:11,  roster:['creep','creep','creep','fast','fast','armored'] }, reward:40 },
+  5:  { path: PATH_TEMPLATES[4],  startingGold:280, startingLives:18, wave:{ budget:14,  roster:['creep','creep','fast','fast','fast','flying','flying'] }, reward:45 },
+  6:  { path: PATH_TEMPLATES[5],  startingGold:290, startingLives:18, wave:{ budget:19,  roster:['creep','creep','fast','fast','armored','armored','bouncer'] }, reward:50 },
+  7:  { path: PATH_TEMPLATES[6],  startingGold:300, startingLives:18, wave:{ budget:21,  roster:['creep','creep','creep','fast','fast','fast','armored','flying','bouncer'] }, reward:55 },
+  8:  { path: PATH_TEMPLATES[7],  startingGold:310, startingLives:17, wave:{ budget:27,  roster:['creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] }, reward:60 },
+  9:  { path: PATH_TEMPLATES[8],  startingGold:320, startingLives:17, wave:{ budget:31,  roster:['creep','creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:65 },
+  10: { path: PATH_TEMPLATES[9],  startingGold:330, startingLives:17, wave:{ budget:33,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','bouncer','bouncer'] }, reward:70 },
+  11: { path: PATH_TEMPLATES[10], startingGold:340, startingLives:16, wave:{ budget:33,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] }, reward:75 },
+  12: { path: PATH_TEMPLATES[11], startingGold:350, startingLives:16, wave:{ budget:41,  roster:['creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:80 },
+  13: { path: PATH_TEMPLATES[12], startingGold:360, startingLives:16, wave:{ budget:42,  roster:['creep','creep','creep','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer'] }, reward:85 },
+  14: { path: PATH_TEMPLATES[13], startingGold:370, startingLives:15, wave:{ budget:48,  roster:['creep','creep','fast','fast','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','bouncer','bouncer'] }, reward:90 },
+  15: { path: PATH_TEMPLATES[14], startingGold:400, startingLives:20, wave:{ budget:50,  roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] }, reward:150 },
 };
 
 function getPathForMission(m) {
@@ -242,14 +242,25 @@ function getCurrentAuthoredWave(mission) {
   return waves ? waves[Math.min(G.subWaveIndex, waves.length - 1)] : null;
 }
 
+function getWaveThreatBudget(wave) {
+  return wave.roster.reduce((total, type) => total + ENEMY_DEFS[type].threat, 0);
+}
+
+function getWaveRoleSummary(wave) {
+  const counts = {};
+  wave.roster.forEach(type => {
+    const role = ENEMY_DEFS[type].role;
+    counts[role] = (counts[role] || 0) + 1;
+  });
+  return Object.entries(counts).map(([role, count]) => `${role}×${count}`).join(' · ');
+}
+
 function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
-  if (types) {
-    const enemyIcons = { creep:'👹', fast:'💨', armored:'🛡️', flying:'🦅', bouncer:'🔄', boss:'👺' };
-    return label + types.map(t => enemyIcons[t] || '•').join(' ');
-  }
-  return label + `BUDGET ${wave.budget} · ${wave.roster.length} threats`;
+  if (types) wave = { roster: types };
+  const budget = wave.budget || getWaveThreatBudget(wave);
+  return label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
 }
 
 function applyMissionBudget(m) {
@@ -1069,13 +1080,11 @@ function waveComplete() {
   G.waveActive = false;
   SFX.waveClear();
 
-  // Gold bonus for completing wave
   const authored = getMissionData(G.mission);
   const waves = getAuthoredWaves(G.mission);
   const isFinalSubWave = !waves || G.subWaveIndex >= waves.length - 1;
-  const goldBonus = authored ? authored.reward : 20 + G.mission * 5;
-  if (isFinalSubWave) G.gold += goldBonus;
 
+  // Authored missions pay their mission reward once, after the final sub-wave.
   if (waves && !isFinalSubWave) {
     const interWaveBonus = 10;
     G.gold += interWaveBonus;
@@ -1084,6 +1093,10 @@ function waveComplete() {
     updateHUD();
     return;
   }
+
+  const goldBonus = authored ? authored.reward : 20 + G.mission * 5;
+  G.gold += goldBonus;
+  addFloatText(G.path[0].x, G.path[0].y - 24, `+${goldBonus} MISSION REWARD`, '#ffd166');
 
   // Check if mission complete
   if (G.mission >= 99) {
