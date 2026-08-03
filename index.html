@@ -193,6 +193,9 @@ const PATH_TEMPLATES = [
   [[0,1],[4,1],[4,5],[1,5],[1,11],[8,11],[8,15],[12,15]],
   [[0,3],[3,3],[3,9],[7,9],[7,1],[11,1],[11,13],[5,13],[5,16]],
   [[0,15],[4,15],[4,7],[9,7],[9,12],[2,12],[2,2],[12,2]],
+  [[0,0],[3,0],[3,5],[9,5],[9,1],[12,1],[12,11],[7,11],[7,16],[0,16]],
+  [[0,5],[2,5],[2,1],[6,1],[6,9],[11,9],[11,15],[5,15],[5,12],[0,12]],
+  [[0,10],[4,10],[4,3],[8,3],[8,13],[12,13],[12,6],[3,6],[3,16],[0,16]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -200,7 +203,7 @@ const PATH_TEMPLATES = [
 // Missions 1-3 additionally provide an explicit deterministic sub-wave sequence;
 // the legacy wave field remains the first sub-wave for selector compatibility.
 // Missions 6-8 progress from swarm/runner pressure into armored, flying, and Bouncer disruption roles.
-// Beta slice adds authored rush missions 16-18; missions 19+ retain legacy fallback.
+// Beta authored slice covers rush 16-18 and overclock 19-21; later missions use legacy fallback.
 const AUTHORED_MISSIONS = {
   1:  { path: PATH_TEMPLATES[0],  startingGold:250, startingLives:20, wave:{ budget:6,   roster:['creep','creep','creep','creep','creep','creep'] }, waves:[
     { budget:6,  roster:['creep','creep','creep','creep','creep','creep'] },
@@ -293,6 +296,21 @@ const AUTHORED_MISSIONS = {
     { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
     { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
   ], reward:105 },
+  19: { path: PATH_TEMPLATES[18], startingGold:440, startingLives:15, modifier:'overclock', wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] },
+    { budget:16, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:19, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:110 },
+  20: { path: PATH_TEMPLATES[19], startingGold:450, startingLives:15, modifier:'overclock', wave:{ budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:115 },
+  21: { path: PATH_TEMPLATES[20], startingGold:460, startingLives:15, modifier:'overclock', wave:{ budget:15, roster:['creep','creep','creep','fast','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:15, roster:['creep','creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:18, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:21, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:120 },
 };
 
 function getPathForMission(m) {
@@ -329,7 +347,8 @@ function getWaveRoleSummary(wave) {
 function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
-  const modifier = getMissionData(G.mission)?.modifier === 'rush' ? 'RUSH · ' : '';
+  const missionModifier = getMissionData(G.mission)?.modifier;
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
@@ -949,9 +968,10 @@ function posOnPath(dist) {
 function spawnEnemy(type) {
   const hp = getEnemyHp(G.mission, type);
   const def = ENEMY_DEFS[type];
+  const speed = def.speed * (getMissionData(G.mission)?.modifier === 'overclock' ? 1.2 : 1);
 
   G.enemies.push({
-    type, hp, maxHp: hp, speed: def.speed, reward: def.reward,
+    type, hp, maxHp: hp, speed, reward: def.reward,
     x: G.path[0].x, y: G.path[0].y, r: def.r,
     dist: 0, alive: true, slowed: false, slowTimer: 0,
     _isBouncer: type === 'bouncer',
