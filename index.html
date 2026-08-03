@@ -1039,21 +1039,23 @@ function drawFloatTexts() {
 }
 
 function drawBackground() {
-  // Dark background with stars
-  ctx.fillStyle = '#0d0d1a';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const w = canvas.width, h = canvas.height;
+  const bg = ctx.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.45, Math.max(w, h) * 0.72);
+  bg.addColorStop(0, '#111c46'); bg.addColorStop(0.52, '#080e29'); bg.addColorStop(1, '#020511');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
 
-  // Stars
-  for (let i = 0; i < 60; i++) {
-    const sx = (i * 137.5) % canvas.width;
-    const sy = (i * 97.3) % canvas.height;
-    ctx.fillStyle = Math.random() > 0.5 ? '#334466' : '#445577';
-    ctx.globalAlpha = Math.random() * 0.2 + 0.1;
-    ctx.beginPath();
-    ctx.arc(sx, sy, Math.random() * 2 + 0.5, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 44; i++) {
+    const sx = (i * 137.5 + 19) % w, sy = (i * 97.3 + 31) % h;
+    const twinkle = 0.12 + (Math.sin(Date.now() * 0.001 + i * 1.7) + 1) * 0.08;
+    ctx.fillStyle = i % 5 === 0 ? '#ff52cf' : i % 3 === 0 ? '#5de7ff' : '#8da7db';
+    ctx.globalAlpha = twinkle;
+    ctx.beginPath(); ctx.arc(sx, sy, i % 7 === 0 ? 1.5 : 0.7, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.08; ctx.strokeStyle = '#5de7ff'; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(w * 0.5, h * 0.46, Math.min(w, h) * (0.28 + i * 0.11), 0, Math.PI * 2); ctx.stroke(); }
+  ctx.restore();
 }
 
 // =============== GAME LOGIC ===============
