@@ -34,6 +34,7 @@ button { -webkit-font-smoothing: antialiased; }
 .overlay-screen { position: fixed; inset: 0; z-index: 100; background: rgba(3, 6, 20, .92); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; font-family: 'Segoe UI', system-ui, sans-serif; }
 .overlay-screen h1 { font-size: clamp(30px, 8vw, 44px); margin-bottom: 8px; letter-spacing: clamp(2px, 1vw, 5px); font-weight: 800; }
 .overlay-screen .subtitle { font-size: 13px; margin-bottom: 32px; letter-spacing: 2px; text-transform: uppercase; }
+.build-version { margin-top: 14px; color: var(--amber); font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; text-shadow: 0 0 9px var(--amber); z-index: 1; }
 .overlay-screen button { padding: 14px 42px; font-size: 17px; font-weight: 750; border: 1px solid; border-radius: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.15), 0 0 24px rgba(101,255,188,.18); }
 .instructions { margin-top: 26px; color: #8390b2; font-size: 12px; text-align: center; line-height: 1.9; max-width: 320px; }
 #startScreen { background: radial-gradient(ellipse at 50% 42%, rgba(36, 30, 93, .9) 0%, rgba(10, 15, 40, .97) 42%, #030611 100%); }
@@ -91,6 +92,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
+  <div class="build-version">v1.1.3 · gamma systems online</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
