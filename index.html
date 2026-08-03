@@ -11,6 +11,14 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 button { -webkit-font-smoothing: antialiased; }
 #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
 #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: center; align-items: center; gap: 7px; padding: max(8px, env(safe-area-inset-top)) 10px 16px; background: linear-gradient(180deg, rgba(2, 5, 18, .98), rgba(8, 14, 39, .78) 58%, transparent); font-family: 'Segoe UI', system-ui, sans-serif; pointer-events: none; }
+.hud-icon { position: relative; display: inline-block; width: 15px; height: 15px; color: currentColor; font-size: 0; }
+.hud-icon::before, .hud-icon::after { content: ''; position: absolute; display: block; box-sizing: border-box; }
+.hud-life::before { width: 11px; height: 11px; left: 2px; top: 2px; border: 2px solid currentColor; transform: rotate(45deg); border-radius: 2px; }
+.hud-wave::before { width: 14px; height: 7px; left: 0; top: 5px; border-top: 2px solid currentColor; border-radius: 50%; box-shadow: 0 4px currentColor; }
+.hud-kills::before { width: 12px; height: 12px; left: 1px; top: 1px; border: 2px solid currentColor; border-radius: 50%; }
+.hud-kills::after { width: 3px; height: 3px; left: 4px; top: 5px; background: currentColor; border-radius: 50%; box-shadow: 5px 0 currentColor; }
+.hud-gold::before { width: 11px; height: 11px; left: 2px; top: 2px; border: 2px solid currentColor; transform: rotate(45deg); }
+.hud-gold::after { content: '$'; left: 5px; top: 1px; font-size: 9px; font-weight: 900; }
 .hud-item { display: flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid rgba(93,231,255,.3); border-radius: 6px; background: linear-gradient(145deg, rgba(16, 31, 68, .9), rgba(5, 11, 30, .88)); box-shadow: inset 0 1px rgba(255,255,255,.1), 0 0 14px rgba(32,112,194,.12); color: #fff; font-size: 12px; font-weight: 750; letter-spacing: .2px; text-shadow: 0 0 9px currentColor; }
 #towerPanel { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; display: flex; gap: 6px; padding: 14px 8px max(12px, env(safe-area-inset-bottom)); background: linear-gradient(0deg, rgba(2, 5, 18, .99), rgba(7, 14, 37, .95) 72%, transparent); justify-content: center; flex-wrap: wrap; border-top: 1px solid rgba(93,231,255,.12); }
 #lives { color: var(--danger); } #wave { color: var(--cyan); } #kills { color: var(--amber); } #gold { color: var(--mint); }
@@ -76,10 +84,10 @@ button { -webkit-font-smoothing: antialiased; }
 <body>
 <canvas id="gameCanvas"></canvas>
 <div id="hud">
-  <div class="hud-item" id="lives"><span class="hud-icon">❤️</span> <span id="livesVal">20</span></div>
-  <div class="hud-item" id="wave"><span class="hud-icon">🌊</span> <span id="missionVal">1</span>/<span id="totalMissions">99</span></div>
-  <div class="hud-item" id="kills"><span class="hud-icon">💀</span> <span id="killsVal">0</span></div>
-  <div class="hud-item" id="gold"><span class="hud-icon">💰</span> <span id="goldVal">250</span></div>
+  <div class="hud-item" id="lives"><span class="hud-icon hud-life" aria-hidden="true"></span> <span id="livesVal">20</span></div>
+  <div class="hud-item" id="wave"><span class="hud-icon hud-wave" aria-hidden="true"></span> <span id="missionVal">1</span>/<span id="totalMissions">99</span></div>
+  <div class="hud-item" id="kills"><span class="hud-icon hud-kills" aria-hidden="true"></span> <span id="killsVal">0</span></div>
+  <div class="hud-item" id="gold"><span class="hud-icon hud-gold" aria-hidden="true"></span> <span id="goldVal">250</span></div>
   <div class="hud-item" id="sector"><span id="sectorName">Alpha</span></div>
 </div>
 <div id="actionBar">
