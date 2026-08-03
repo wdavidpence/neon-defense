@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.1.3 · Gamma Campaign</title>
+<title>neoDefense 1.2.0 · Neo Defense Visual Pass 20</title>
 <style>
 :root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,7 +54,7 @@ button { -webkit-font-smoothing: antialiased; }
 #backBtn { border-color: var(--violet); color: var(--violet); background: rgba(169,130,255,.12); margin-top: 20px; }
 #tooltip { position: fixed; z-index: 50; pointer-events: none; display: none; background: rgba(7, 13, 30, .96); border: 1px solid rgba(93,231,255,.35); border-radius: 9px; padding: 9px 11px; color: #edf4ff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; min-width: 140px; box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 15px rgba(93,231,255,.1); }
 #tooltip .tt-name { font-weight: 750; font-size: 12px; margin-bottom: 4px; color: var(--cyan); } #tooltip .tt-stat { color: #96a5c6; } #tooltip .tt-stat span { color: #e5edff; font-weight: 650; } #tooltip .tt-action { color: var(--danger); margin-top: 5px; font-weight: 650; font-size: 9px; text-transform: uppercase; }
-@media (max-width: 600px) { #hud { gap: 3px; padding-left: 5px; padding-right: 5px; } .hud-item { min-height: 25px; padding: 3px 5px; font-size: 10px; } .hud-icon { font-size: 12px; } #sector { font-size: 9px; } #actionBar { top: max(39px, calc(env(safe-area-inset-top) + 30px)); right: 5px; gap: 4px; } .action-btn { padding: 6px 8px; font-size: 9px; } #towerPanel { gap: 4px; padding-left: 4px; padding-right: 4px; } .tower-btn { min-width: 49px; min-height: 54px; } }
+@media (max-width: 600px) { #hud { gap: 3px; padding-left: 5px; padding-right: 5px; } .hud-item { min-height: 25px; padding: 3px 5px; font-size: 10px; } .hud-icon { font-size: 12px; } #sector { font-size: 9px; } #actionBar { top: max(39px, calc(env(safe-area-inset-top) + 30px)); right: 5px; gap: 4px; } .action-btn { padding: 6px 8px; font-size: 9px; } #towerPanel { gap: 4px; padding-left: 4px; padding-right: 4px; } .tower-btn { min-width: 49px; min-height: 54px; border-radius: 6px; } .tower-btn .t-icon { font-size: 20px; } }
 @media (max-height: 520px) { #towerPanel { padding-top: 6px; } .tower-btn { min-height: 45px; } .tower-btn .t-icon { font-size: 17px; } .overlay-screen .subtitle { margin-bottom: 18px; } .instructions { margin-top: 16px; } }
 </style>
 </head>
@@ -91,7 +91,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
-  <div class="build-version">v1.1.3 · gamma systems online</div>
+  <div class="build-version">v1.2.0 · visual pass 20</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
