@@ -165,7 +165,7 @@ const POWERUPS = {
 const SECTORS = [
   { name:'Alpha', range:[1,15],   enemies:['creep'],       bossWave:15 },
   { name:'Beta',  range:[16,30],  enemies:['creep','fast'], bossWave:30, summary:'Three tactical rules: RUSH compresses spawns · OVERCLOCK speeds enemies · LEAN / NO-BUILD / BOUNTY reshape planning.' },
-  { name:'Gamma', range:[31,45],  enemies:['creep','fast','armored'], bossWave:45, summary:'REINFORCED armor raises HP · HARDENED halves armored slow · JAMMED disables Booster support for Cannons.' },
+  { name:'Gamma', range:[31,45],  enemies:['creep','fast','armored','flying','bouncer'], bossWave:45, summary:'REINFORCED armor raises HP · HARDENED halves armored slow · JAMMED disables Booster support for Cannons.' },
   { name:'Delta', range:[46,60],  enemies:['creep','fast','armored','flying'], bossWave:60 },
   { name:'Epsilon',range:[61,75], enemies:['creep','fast','armored','flying','bouncer'], bossWave:75 },
   { name:'Zeta',  range:[76,90],  enemies:['creep','fast','armored','flying','bouncer'], bossWave:90 },
@@ -216,6 +216,10 @@ const PATH_TEMPLATES = [
   [[0,6],[2,6],[2,15],[5,15],[5,4],[9,4],[9,12],[13,12],[13,1]],
   [[0,14],[4,14],[4,8],[1,8],[1,2],[7,2],[7,10],[11,10],[11,5],[14,5]],
   [[0,3],[3,3],[3,11],[6,11],[6,1],[10,1],[10,14],[13,14],[13,7],[8,7]],
+  // Gamma mixed-role paths: authored only for missions 40-42.
+  [[0,2],[4,2],[4,8],[1,8],[1,14],[7,14],[7,5],[12,5],[12,11]],
+  [[0,14],[3,14],[3,4],[8,4],[8,12],[12,12],[12,1],[6,1],[6,8]],
+  [[0,6],[5,6],[5,1],[10,1],[10,9],[2,9],[2,15],[8,15],[8,12],[12,12]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -424,6 +428,22 @@ const AUTHORED_MISSIONS = {
     { budget:20, roster:['creep','creep','fast','fast','fast','armored','armored','armored'] },
     { budget:23, roster:['creep','fast','fast','fast','armored','armored','armored','armored'] },
   ], reward:210 },
+  // Gamma mixed-role slice: air and armor pressure with Bouncer disruption; mixed is label-only.
+  40: { path: PATH_TEMPLATES[39], startingGold:280, startingLives:17, modifier:'mixed', wave:{ budget:23, roster:['creep','creep','creep','fast','fast','armored','armored','flying','bouncer'] }, waves:[
+    { budget:23, roster:['creep','creep','creep','fast','fast','armored','armored','flying','bouncer'] },
+    { budget:30, roster:['creep','creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:33, roster:['creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer'] },
+  ], reward:205 },
+  41: { path: PATH_TEMPLATES[40], startingGold:290, startingLives:17, modifier:'mixed', wave:{ budget:24, roster:['creep','creep','fast','fast','fast','armored','armored','flying','bouncer'] }, waves:[
+    { budget:24, roster:['creep','creep','fast','fast','fast','armored','armored','flying','bouncer'] },
+    { budget:34, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:36, roster:['creep','fast','fast','armored','armored','armored','flying','flying','flying','bouncer','bouncer'] },
+  ], reward:210 },
+  42: { path: PATH_TEMPLATES[41], startingGold:300, startingLives:17, modifier:'mixed', wave:{ budget:28, roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] }, waves:[
+    { budget:28, roster:['creep','creep','creep','fast','fast','fast','armored','armored','flying','flying','bouncer'] },
+    { budget:37, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','flying','bouncer','bouncer'] },
+    { budget:40, roster:['creep','fast','fast','armored','armored','armored','armored','flying','flying','flying','bouncer','bouncer'] },
+  ], reward:215 },
 };
 
 function getPathForMission(m) {
@@ -461,7 +481,7 @@ function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
   const missionModifier = getMissionData(G.mission)?.modifier;
-  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : missionModifier === 'bounty' ? 'BOUNTY · 1.25× kills · ' : missionModifier === 'reinforced' ? 'REINFORCED · armored HP 1.3× · ' : missionModifier === 'hardened' ? 'HARDENED · armored slow 50% · ' : missionModifier === 'jammed' ? 'JAMMED · Cannons unpowered · ' : '';
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : missionModifier === 'bounty' ? 'BOUNTY · 1.25× kills · ' : missionModifier === 'reinforced' ? 'REINFORCED · armored HP 1.3× · ' : missionModifier === 'hardened' ? 'HARDENED · armored slow 50% · ' : missionModifier === 'jammed' ? 'JAMMED · Cannons unpowered · ' : missionModifier === 'mixed' ? 'MIXED · AIR + ARMOR + DISRUPTOR · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
@@ -2026,7 +2046,7 @@ function showMissionSelect() {
           btn.classList.add('authored');
           const difficulty = m === 15 ? 'Boss' : m <= 2 ? 'Starter' : m <= 5 ? 'Training' : m <= 10 ? 'Challenge' : 'Advanced';
           const roles = [...new Set(missionData.wave.roster)].map(type => ({ creep:'●', fast:'➤', armored:'⬢', flying:'✦', bouncer:'◉', boss:'★' }[type] || '?')).join('');
-          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells', bounty:'BOUNTY · +25% kill gold', reinforced:'REINFORCED · armored HP 1.3×', hardened:'HARDENED · armored slow 50%', jammed:'JAMMED · Cannons unpowered' }[missionData.modifier] || '';
+          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells', bounty:'BOUNTY · +25% kill gold', reinforced:'REINFORCED · armored HP 1.3×', hardened:'HARDENED · armored slow 50%', jammed:'JAMMED · Cannons unpowered', mixed:'MIXED · AIR + ARMOR + DISRUPTOR' }[missionData.modifier] || '';
           const modifierMarkup = modifierMeta ? `<span class="mission-modifier">${modifierMeta}</span>` : '';
           btn.innerHTML = `<span class="mission-num">${m}</span><span class="mission-difficulty">${difficulty}</span><span class="mission-meta">💰${missionData.startingGold} · ❤️${missionData.startingLives}</span><span class="mission-threats">${roles} · ${missionData.wave.budget} threat</span>${modifierMarkup}`;
           const miniMap = createMissionMiniMap(missionData);
