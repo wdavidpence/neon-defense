@@ -48,6 +48,8 @@ button { -webkit-font-smoothing: antialiased; }
 .sector-group { margin-bottom: 25px; } .sector-title { color: var(--violet); font-size: 15px; font-weight: 750; margin-bottom: 9px; text-shadow: 0 0 8px var(--violet); letter-spacing: .6px; }
 .mission-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; } .mission-btn { padding: 10px 6px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(145deg, rgba(25,38,73,.9), rgba(8,14,32,.95)); color: #dce5fa; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; user-select: none; touch-action: manipulation; box-shadow: inset 0 1px rgba(255,255,255,.07); }
 .mission-btn.authored { min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center; } .mission-num { font-size: 15px; color: #f4f7ff; } .mission-meta { color: #9eafd2; font-size: 8px; font-weight: 600; letter-spacing: .2px; } .mission-threats { color: var(--amber); font-size: 9px; font-weight: 700; white-space: nowrap; } .mission-difficulty { color: var(--mint); font-size: 8px; text-transform: uppercase; letter-spacing: .7px; } .mission-modifier { color: var(--cyan); font-size: 7px; font-weight: 750; letter-spacing: .3px; white-space: nowrap; } .mission-btn.boss .mission-difficulty { color: var(--danger); }
+.mission-mini-map { display: grid; grid-template-columns: repeat(5, 5px); grid-template-rows: repeat(3, 5px); gap: 2px; margin-top: 2px; padding: 2px; border: 1px solid rgba(116,153,220,.22); border-radius: 3px; background: rgba(3,6,20,.55); }
+.mission-mini-cell { width: 5px; height: 5px; border-radius: 1px; background: rgba(116,153,220,.3); } .mission-mini-cell.no-build { background: rgba(255,102,136,.22); position: relative; } .mission-mini-cell.no-build::after { content: '×'; position: absolute; inset: -4px 0 0; color: var(--danger); font-size: 9px; line-height: 9px; font-weight: 800; }
 .mission-btn.unlocked { border-color: var(--mint); color: var(--mint); } .mission-btn.completed { border-color: var(--cyan); color: var(--cyan); background: rgba(93,231,255,.1); } .mission-btn.boss { border-color: var(--danger); color: var(--danger); } .mission-btn.locked { opacity: .3; pointer-events: none; }
 #backBtn { border-color: var(--violet); color: var(--violet); background: rgba(169,130,255,.12); margin-top: 20px; }
 #tooltip { position: fixed; z-index: 50; pointer-events: none; display: none; background: rgba(7, 13, 30, .96); border: 1px solid rgba(93,231,255,.35); border-radius: 9px; padding: 9px 11px; color: #edf4ff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; min-width: 140px; box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 15px rgba(93,231,255,.1); }
@@ -202,6 +204,9 @@ const PATH_TEMPLATES = [
   [[0,2],[3,2],[3,10],[7,10],[7,5],[11,5],[11,15],[5,15],[5,12],[0,12]],
   [[0,11],[2,11],[2,3],[6,3],[6,13],[10,13],[10,7],[12,7],[12,1]],
   [[0,4],[4,4],[4,14],[8,14],[8,8],[12,8],[12,16],[6,16],[6,6],[0,6]],
+  [[0,1],[3,1],[3,6],[9,6],[9,14],[12,14],[12,10],[6,10],[6,16],[0,16]],
+  [[0,12],[4,12],[4,3],[8,3],[8,15],[12,15],[12,7],[2,7],[2,1],[0,1]],
+  [[0,5],[2,5],[2,14],[5,14],[5,2],[10,2],[10,11],[7,11],[7,16],[12,16]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -348,6 +353,21 @@ const AUTHORED_MISSIONS = {
     { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
     { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
   ], reward:150 },
+  28: { path: PATH_TEMPLATES[27], startingGold:230, startingLives:18, modifier:'bounty', wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','armored'] }, waves:[
+    { budget:13, roster:['creep','creep','creep','fast','fast','fast','armored'] },
+    { budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:21, roster:['creep','fast','fast','fast','armored','armored','armored'] },
+  ], reward:155 },
+  29: { path: PATH_TEMPLATES[28], startingGold:240, startingLives:18, modifier:'bounty', wave:{ budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] }, waves:[
+    { budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:17, roster:['creep','fast','fast','fast','fast','armored','armored'] },
+    { budget:20, roster:['fast','fast','fast','fast','armored','armored','armored'] },
+  ], reward:160 },
+  30: { path: PATH_TEMPLATES[29], startingGold:250, startingLives:18, modifier:'bounty', wave:{ budget:17, roster:['creep','creep','creep','fast','fast','fast','armored','armored'] }, waves:[
+    { budget:17, roster:['creep','creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:20, roster:['creep','creep','fast','fast','fast','armored','armored','armored'] },
+    { budget:25, roster:['creep','fast','fast','fast','fast','armored','armored','armored','armored'] },
+  ], reward:165 },
 };
 
 function getPathForMission(m) {
@@ -385,7 +405,7 @@ function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
   const missionModifier = getMissionData(G.mission)?.modifier;
-  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : '';
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : missionModifier === 'bounty' ? 'BOUNTY · 1.25× kills · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
@@ -1023,7 +1043,7 @@ function spawnEnemy(type) {
   const speed = def.speed * (getMissionData(G.mission)?.modifier === 'overclock' ? 1.2 : 1);
 
   G.enemies.push({
-    type, hp, maxHp: hp, speed, reward: def.reward,
+    type, hp, maxHp: hp, speed, reward: def.reward * (getMissionData(G.mission)?.modifier === 'bounty' ? 1.25 : 1),
     x: G.path[0].x, y: G.path[0].y, r: def.r,
     dist: 0, alive: true, slowed: false, slowTimer: 0,
     _isBouncer: type === 'bouncer',
@@ -1866,6 +1886,29 @@ function handleCellClick(cell, col, row) {
   }
 }
 
+function createMissionMiniMap(missionData) {
+  if (!missionData.noBuild || missionData.noBuild.length === 0) return null;
+
+  const map = document.createElement('span');
+  map.className = 'mission-mini-map';
+  map.setAttribute('aria-label', 'Approximate restricted cells');
+  const restricted = new Set(missionData.noBuild.map(([col, row]) => {
+    const previewCol = Math.min(4, Math.floor(col / 13 * 5));
+    const previewRow = Math.min(2, Math.floor(row / 17 * 3));
+    return `${previewCol},${previewRow}`;
+  }));
+
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 5; col++) {
+      const cell = document.createElement('span');
+      cell.className = 'mission-mini-cell';
+      if (restricted.has(`${col},${row}`)) cell.classList.add('no-build');
+      map.appendChild(cell);
+    }
+  }
+  return map;
+}
+
 function createGrid() {
   G.grid = [];
 
@@ -1914,9 +1957,11 @@ function showMissionSelect() {
           btn.classList.add('authored');
           const difficulty = m === 15 ? 'Boss' : m <= 2 ? 'Starter' : m <= 5 ? 'Training' : m <= 10 ? 'Challenge' : 'Advanced';
           const roles = [...new Set(missionData.wave.roster)].map(type => ({ creep:'●', fast:'➤', armored:'⬢', flying:'✦', bouncer:'◉', boss:'★' }[type] || '?')).join('');
-          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells' }[missionData.modifier] || '';
+          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells', bounty:'BOUNTY · +25% kill gold' }[missionData.modifier] || '';
           const modifierMarkup = modifierMeta ? `<span class="mission-modifier">${modifierMeta}</span>` : '';
           btn.innerHTML = `<span class="mission-num">${m}</span><span class="mission-difficulty">${difficulty}</span><span class="mission-meta">💰${missionData.startingGold} · ❤️${missionData.startingLives}</span><span class="mission-threats">${roles} · ${missionData.wave.budget} threat</span>${modifierMarkup}`;
+          const miniMap = createMissionMiniMap(missionData);
+          if (miniMap) btn.appendChild(miniMap);
         } else {
           btn.textContent = m;
         }
