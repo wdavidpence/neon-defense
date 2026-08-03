@@ -675,6 +675,15 @@ function drawGrid() {
       ctx.strokeStyle = isPath ? `rgba(88, 137, 214, ${0.24 + pulse * 0.18})` : 'rgba(58, 76, 145, 0.24)';
       ctx.lineWidth = isPath ? 1.2 : 0.8;
       ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+      if (!isPath && (col + row) % 4 === 0) {
+        ctx.strokeStyle = 'rgba(93,231,255,0.2)';
+        ctx.lineWidth = 1;
+        const inset = CELL * 0.13, arm = CELL * 0.14;
+        ctx.beginPath();
+        ctx.moveTo(x + inset + arm, y + inset); ctx.lineTo(x + inset, y + inset); ctx.lineTo(x + inset, y + inset + arm);
+        ctx.moveTo(x + CELL - inset - arm, y + CELL - inset); ctx.lineTo(x + CELL - inset, y + CELL - inset); ctx.lineTo(x + CELL - inset, y + CELL - inset - arm);
+        ctx.stroke();
+      }
       if (!isPath && (col + row) % 3 === 0) {
         ctx.fillStyle = 'rgba(93,231,255,0.08)';
         ctx.fillRect(x + CELL * 0.16, y + CELL * 0.16, CELL * 0.06, CELL * 0.06);
