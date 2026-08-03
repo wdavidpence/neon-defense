@@ -199,6 +199,9 @@ const PATH_TEMPLATES = [
   [[0,7],[3,7],[3,1],[8,1],[8,11],[5,11],[5,16],[12,16]],
   [[0,13],[2,13],[2,4],[6,4],[6,15],[10,15],[10,8],[12,8],[12,2]],
   [[0,9],[4,9],[4,2],[9,2],[9,6],[2,6],[2,14],[7,14],[7,11],[12,11]],
+  [[0,2],[3,2],[3,10],[7,10],[7,5],[11,5],[11,15],[5,15],[5,12],[0,12]],
+  [[0,11],[2,11],[2,3],[6,3],[6,13],[10,13],[10,7],[12,7],[12,1]],
+  [[0,4],[4,4],[4,14],[8,14],[8,8],[12,8],[12,16],[6,16],[6,6],[0,6]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -329,6 +332,22 @@ const AUTHORED_MISSIONS = {
     { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
     { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
   ], reward:135 },
+  // Beta no-build slice: route cells make placement decisions visible.
+  25: { path: PATH_TEMPLATES[24], startingGold:240, startingLives:18, modifier:'no-build', noBuild:[[4,4],[5,4],[6,4],[7,4]], wave:{ budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] }, waves:[
+    { budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] },
+    { budget:15, roster:['creep','creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:18, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:140 },
+  26: { path: PATH_TEMPLATES[25], startingGold:250, startingLives:18, modifier:'no-build', noBuild:[[2,8],[3,8],[4,8],[5,8]], wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] },
+    { budget:16, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:19, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:145 },
+  27: { path: PATH_TEMPLATES[26], startingGold:260, startingLives:18, modifier:'no-build', noBuild:[[8,3],[8,4],[8,5],[8,6]], wave:{ budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:150 },
 };
 
 function getPathForMission(m) {
@@ -366,10 +385,14 @@ function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
   const missionModifier = getMissionData(G.mission)?.modifier;
-  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : '';
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
+}
+
+function isNoBuildCell(col, row) {
+  return (getMissionData(G.mission)?.noBuild || []).some(([cellCol, cellRow]) => cellCol === col && cellRow === row);
 }
 
 function applyMissionBudget(m) {
@@ -536,6 +559,17 @@ function drawGrid() {
       ctx.strokeStyle = isPath ? 'rgba(51,51,102,0.3)' : 'rgba(34,34,85,0.4)';
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+
+      if (isNoBuildCell(col, row)) {
+        ctx.fillStyle = 'rgba(255,102,136,0.14)';
+        ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
+        ctx.strokeStyle = 'rgba(255,102,136,0.72)';
+        ctx.strokeRect(x + 3.5, y + 3.5, CELL - 7, CELL - 7);
+        ctx.fillStyle = '#ff9ab0';
+        ctx.font = `bold ${Math.max(7, CELL * 0.16)}px Segoe UI, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('NO BUILD', x + CELL / 2, y + CELL / 2 + 3);
+      }
     }
   }
 }
@@ -1291,6 +1325,10 @@ function collectBoosterCharge(x, y) {
 function placeTower(col, row, type) {
   const cell = G.grid[row][col];
   if (cell._isPath || cell._tower) return;
+  if (cell._noBuild) {
+    addFloatText(col * CELL + CELL / 2, row * CELL + CELL / 2, 'NO BUILD', '#ff6688');
+    return;
+  }
 
   const def = TOWER_DEFS[type];
   if (G.gold < def.cost) return;
@@ -1838,7 +1876,7 @@ function createGrid() {
       const isP = isPathCell(col, row);
 
       G.grid[row][col] = {
-        _col: col, _row: row, _isPath: isP, _tower: null,
+        _col: col, _row: row, _isPath: isP, _noBuild: isNoBuildCell(col, row), _tower: null,
       };
     }
   }
@@ -1876,7 +1914,7 @@ function showMissionSelect() {
           btn.classList.add('authored');
           const difficulty = m === 15 ? 'Boss' : m <= 2 ? 'Starter' : m <= 5 ? 'Training' : m <= 10 ? 'Challenge' : 'Advanced';
           const roles = [...new Set(missionData.wave.roster)].map(type => ({ creep:'●', fast:'➤', armored:'⬢', flying:'✦', bouncer:'◉', boss:'★' }[type] || '?')).join('');
-          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold' }[missionData.modifier] || '';
+          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells' }[missionData.modifier] || '';
           const modifierMarkup = modifierMeta ? `<span class="mission-modifier">${modifierMeta}</span>` : '';
           btn.innerHTML = `<span class="mission-num">${m}</span><span class="mission-difficulty">${difficulty}</span><span class="mission-meta">💰${missionData.startingGold} · ❤️${missionData.startingLives}</span><span class="mission-threats">${roles} · ${missionData.wave.budget} threat</span>${modifierMarkup}`;
         } else {
@@ -1892,6 +1930,7 @@ function showMissionSelect() {
             G.lives = selectedMission.startingLives;
           }
           loadMissionPath(m);
+          createGrid();
           updateHUD();
         });
       } else {
