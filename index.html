@@ -20,7 +20,20 @@ button { -webkit-font-smoothing: antialiased; }
 .tower-btn:active, .action-btn:active, .overlay-screen button:active, .mission-btn:active { transform: translateY(1px) scale(.98); }
 .tower-btn { min-width: 57px; min-height: 58px; padding: 6px 5px; border: 1px solid rgba(93,231,255,.28); border-radius: 7px; background: linear-gradient(155deg, rgba(23, 44, 86, .96), rgba(4, 10, 27, .98)); color: #f4f7ff; font-size: 9px; font-weight: 650; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.12), 0 0 14px rgba(23,116,191,.14); }
 .tower-btn.selected { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(93,231,255,.35), 0 0 24px rgba(93,231,255,.45), inset 0 1px rgba(255,255,255,.2); transform: translateY(-3px); }
-.tower-btn .t-icon { font-size: 22px; line-height: 1; filter: drop-shadow(0 0 7px rgba(93,231,255,.35)); }
+.tower-btn .t-icon { position: relative; width: 28px; height: 24px; line-height: 1; filter: drop-shadow(0 0 7px rgba(93,231,255,.35)); color: var(--cyan); }
+.tower-glyph::before, .tower-glyph::after { content: ''; position: absolute; display: block; box-sizing: border-box; }
+.tower-glyph-cannon::before { width: 18px; height: 9px; left: 5px; top: 9px; border: 2px solid currentColor; border-radius: 2px; transform: rotate(-12deg); }
+.tower-glyph-cannon::after { width: 7px; height: 14px; left: 11px; top: 1px; border: 2px solid currentColor; border-radius: 4px 4px 1px 1px; }
+.tower-glyph-vulcan::before { width: 20px; height: 6px; left: 4px; top: 10px; border: 2px solid currentColor; border-radius: 2px; }
+.tower-glyph-vulcan::after { width: 4px; height: 4px; left: 7px; top: 5px; border-radius: 50%; background: currentColor; box-shadow: 7px 0 currentColor, 14px 0 currentColor; }
+.tower-glyph-laser::before { width: 18px; height: 18px; left: 5px; top: 2px; border: 2px solid currentColor; transform: rotate(45deg); }
+.tower-glyph-laser::after { width: 6px; height: 6px; left: 11px; top: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.tower-glyph-missile::before { width: 20px; height: 10px; left: 4px; top: 7px; border: 2px solid currentColor; clip-path: polygon(0 50%, 25% 0, 100% 0, 100% 100%, 25% 100%); transform: rotate(-12deg); }
+.tower-glyph-missile::after { width: 4px; height: 4px; left: 5px; top: 10px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.tower-glyph-boomerang::before { width: 21px; height: 18px; left: 4px; top: 2px; border: 3px solid currentColor; border-left-color: transparent; border-radius: 50%; transform: rotate(25deg); }
+.tower-glyph-multiRkt::before { width: 6px; height: 15px; left: 4px; top: 5px; border: 2px solid currentColor; transform: skewY(-18deg); box-shadow: 8px 0 currentColor, 16px 0 currentColor; }
+.tower-glyph-booster::before { width: 17px; height: 17px; left: 6px; top: 3px; border: 2px solid currentColor; transform: rotate(45deg); }
+.tower-glyph-booster::after { width: 6px; height: 6px; left: 11px; top: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px var(--cyan); }
 .tower-btn .t-cost { color: var(--amber); font-size: 10px; font-weight: 750; text-shadow: 0 0 7px rgba(255,209,102,.35); } .tower-btn .t-name { color: #c2d4f6; font-size: 8px; letter-spacing: .35px; text-transform: uppercase; }
 .tower-btn .t-counter { color: var(--cyan); font-size: 7px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; margin-top: 1px; opacity: .95; }
 #actionBar { position: fixed; top: max(44px, calc(env(safe-area-inset-top) + 34px)); right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
@@ -1876,7 +1889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     b.dataset.type = k;
     b.title = `${d.name}: ${counterLabel}`;
     b.setAttribute('aria-label', `${d.name}, ${counterLabel} counter, costs ${d.cost}`);
-    b.innerHTML = `<div class="t-icon">${d.icon}</div><div class="t-name">${d.name}</div><div class="t-counter">${counterLabel}</div><div class="t-cost">💰${d.cost}</div>`;
+    b.innerHTML = `<div class="t-icon tower-glyph tower-glyph-${k}" aria-hidden="true"></div><div class="t-name">${d.name}</div><div class="t-counter">${counterLabel}</div><div class="t-cost">💰${d.cost}</div>`;
     b.addEventListener('click', () => selectType(k));
     panel.appendChild(b);
   });
