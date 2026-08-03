@@ -958,6 +958,8 @@ function drawEnemies() {
         ctx.rotate(Date.now() * 0.00025); ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, rr = i % 2 ? r * 0.72 : r; const px = Math.cos(a) * rr, py = Math.sin(a) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#14071c'; ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-r * 0.24, -r * 0.12, r * 0.13, 0, Math.PI * 2); ctx.arc(r * 0.24, -r * 0.12, r * 0.13, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = Math.max(1, r * 0.1); ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(0, 0, r * 1.22, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(-r * 0.45, -r * 0.78); ctx.lineTo(-r * 0.18, -r * 1.16); ctx.lineTo(0, -r * 0.8); ctx.lineTo(r * 0.18, -r * 1.16); ctx.lineTo(r * 0.45, -r * 0.78); ctx.closePath(); ctx.fill();
         break;
     }
     ctx.restore();
