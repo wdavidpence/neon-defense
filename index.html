@@ -816,17 +816,19 @@ function drawTowers() {
 
     // Selected range indicator
     if (G.selectedTower === t) {
+      ctx.save();
       ctx.strokeStyle = def.color;
       ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.3;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2);
-      ctx.stroke();
-
+      ctx.setLineDash([4, 4]);
+      ctx.globalAlpha = 0.72;
+      ctx.shadowColor = def.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.07;
       ctx.fillStyle = def.color;
-      ctx.globalAlpha = 0.08;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
 
     if (t.key === 'booster') {
