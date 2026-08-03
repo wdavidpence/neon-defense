@@ -45,7 +45,7 @@ button { -webkit-font-smoothing: antialiased; }
 #winScreen { display: none; } #winScreen h1 { color: var(--mint); text-shadow: 0 0 20px var(--mint); }
 #missionSelect { display: none; background: rgba(3, 6, 20, .97); overflow-y: auto; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); }
 #missionSelect h1 { color: #f4f1ff; text-shadow: 0 0 20px var(--violet), 0 0 40px rgba(169,130,255,.6); margin-bottom: 22px; }
-.sector-group { margin-bottom: 25px; } .sector-title { color: var(--violet); font-size: 15px; font-weight: 750; margin-bottom: 9px; text-shadow: 0 0 8px var(--violet); letter-spacing: .6px; }
+.sector-group { margin-bottom: 25px; } .sector-title { color: var(--violet); font-size: 15px; font-weight: 750; margin-bottom: 9px; text-shadow: 0 0 8px var(--violet); letter-spacing: .6px; } .sector-summary { color: var(--muted); font-size: 9px; line-height: 1.4; width: min(100%, calc(100vw - 40px)); max-width: 620px; box-sizing: border-box; margin: -4px 0 9px; }
 .mission-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; } .mission-btn { padding: 10px 6px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(145deg, rgba(25,38,73,.9), rgba(8,14,32,.95)); color: #dce5fa; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; user-select: none; touch-action: manipulation; box-shadow: inset 0 1px rgba(255,255,255,.07); }
 .mission-btn.authored { min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center; } .mission-num { font-size: 15px; color: #f4f7ff; } .mission-meta { color: #9eafd2; font-size: 8px; font-weight: 600; letter-spacing: .2px; } .mission-threats { color: var(--amber); font-size: 9px; font-weight: 700; white-space: nowrap; } .mission-difficulty { color: var(--mint); font-size: 8px; text-transform: uppercase; letter-spacing: .7px; } .mission-modifier { color: var(--cyan); font-size: 7px; font-weight: 750; letter-spacing: .3px; white-space: nowrap; } .mission-btn.boss .mission-difficulty { color: var(--danger); }
 .mission-mini-map { display: grid; grid-template-columns: repeat(5, 5px); grid-template-rows: repeat(3, 5px); gap: 2px; margin-top: 2px; padding: 2px; border: 1px solid rgba(116,153,220,.22); border-radius: 3px; background: rgba(3,6,20,.55); }
@@ -164,7 +164,7 @@ const POWERUPS = {
 // =============== SECTOR / MISSION STRUCTURE ===============
 const SECTORS = [
   { name:'Alpha', range:[1,15],   enemies:['creep'],       bossWave:15 },
-  { name:'Beta',  range:[16,30],  enemies:['creep','fast'], bossWave:30 },
+  { name:'Beta',  range:[16,30],  enemies:['creep','fast'], bossWave:30, summary:'Three tactical rules: RUSH compresses spawns · OVERCLOCK speeds enemies · LEAN / NO-BUILD / BOUNTY reshape planning.' },
   { name:'Gamma', range:[31,45],  enemies:['creep','fast','armored'], bossWave:45 },
   { name:'Delta', range:[46,60],  enemies:['creep','fast','armored','flying'], bossWave:60 },
   { name:'Epsilon',range:[61,75], enemies:['creep','fast','armored','flying','bouncer'], bossWave:75 },
@@ -1938,6 +1938,12 @@ function showMissionSelect() {
     title.className = 'sector-title';
     title.textContent = `${sector.name} Sector (${sector.range[0]}-${sector.range[1]})`;
     group.appendChild(title);
+    if (sector.summary) {
+      const summary = document.createElement('div');
+      summary.className = 'sector-summary';
+      summary.textContent = sector.summary;
+      group.appendChild(summary);
+    }
 
     const missionGrid = document.createElement('div');
     missionGrid.className = 'mission-grid';
