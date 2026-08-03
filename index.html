@@ -647,22 +647,29 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 function drawGrid() {
+  const pulse = 0.5 + Math.sin(Date.now() * 0.0012) * 0.08;
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       const x = col * CELL, y = row * CELL;
       const isPath = isPathCell(col, row);
-
-      ctx.fillStyle = isPath ? '#1a1a35' : '#111128';
+      const tile = ctx.createLinearGradient(x, y, x + CELL, y + CELL);
+      tile.addColorStop(0, isPath ? '#151c38' : '#080d24');
+      tile.addColorStop(1, isPath ? '#0c1530' : '#05091a');
+      ctx.fillStyle = tile;
       ctx.fillRect(x, y, CELL, CELL);
 
-      ctx.strokeStyle = isPath ? 'rgba(51,51,102,0.3)' : 'rgba(34,34,85,0.4)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isPath ? `rgba(88, 137, 214, ${0.24 + pulse * 0.18})` : 'rgba(58, 76, 145, 0.24)';
+      ctx.lineWidth = isPath ? 1.2 : 0.8;
       ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+      if (!isPath && (col + row) % 3 === 0) {
+        ctx.fillStyle = 'rgba(93,231,255,0.08)';
+        ctx.fillRect(x + CELL * 0.16, y + CELL * 0.16, CELL * 0.06, CELL * 0.06);
+      }
 
       if (isNoBuildCell(col, row)) {
-        ctx.fillStyle = 'rgba(255,102,136,0.14)';
+        ctx.fillStyle = 'rgba(255, 54, 126, 0.12)';
         ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-        ctx.strokeStyle = 'rgba(255,102,136,0.72)';
+        ctx.strokeStyle = 'rgba(255, 102, 166, 0.78)';
         ctx.strokeRect(x + 3.5, y + 3.5, CELL - 7, CELL - 7);
         ctx.fillStyle = '#ff9ab0';
         ctx.font = `bold ${Math.max(7, CELL * 0.16)}px Segoe UI, sans-serif`;
@@ -683,26 +690,44 @@ function isPathCell(col, row) {
 }
 
 function drawPath() {
-  // Outer glow
-  ctx.strokeStyle = 'rgba(26,26,68,0.3)';
-  ctx.lineWidth = CELL * 0.8;
-  ctx.beginPath();
-  G.path.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  // Neo Defense-style layered energy lane with a cyan edge and magenta core.
+  const path = () => {
+    ctx.beginPath();
+    G.path.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  };
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  path();
+  ctx.strokeStyle = 'rgba(19, 225, 255, 0.12)';
+  ctx.lineWidth = CELL * 0.92;
+  ctx.shadowColor = '#1ee8ff';
+  ctx.shadowBlur = CELL * 0.55;
   ctx.stroke();
 
-  // Mid glow
-  ctx.strokeStyle = 'rgba(34,34,102,0.5)';
-  ctx.lineWidth = CELL * 0.6;
-  ctx.beginPath();
-  G.path.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  path();
+  ctx.strokeStyle = 'rgba(21, 103, 180, 0.72)';
+  ctx.lineWidth = CELL * 0.68;
+  ctx.shadowBlur = CELL * 0.24;
   ctx.stroke();
 
-  // Core path
-  ctx.strokeStyle = 'rgba(42,42,102,0.7)';
-  ctx.lineWidth = CELL * 0.45;
-  ctx.beginPath();
-  G.path.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  path();
+  ctx.strokeStyle = '#193d72';
+  ctx.lineWidth = CELL * 0.5;
+  ctx.shadowColor = '#ff28bd';
+  ctx.shadowBlur = 8;
   ctx.stroke();
+
+  path();
+  ctx.strokeStyle = 'rgba(255, 71, 210, 0.72)';
+  ctx.lineWidth = Math.max(2, CELL * 0.06);
+  ctx.setLineDash([CELL * 0.16, CELL * 0.22]);
+  ctx.lineDashOffset = -(Date.now() * 0.04) % (CELL * 0.38);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.shadowBlur = 0;
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
 }
 
 function drawSpawn() {
