@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.2.0 · Neo Defense Visual Pass 20</title>
+<title>neoDefense 1.3.0 · Icon Systems Cycle 2</title>
 <style>
 :root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -60,7 +60,7 @@ button { -webkit-font-smoothing: antialiased; }
 .instructions { margin-top: 26px; color: #8390b2; font-size: 12px; text-align: center; line-height: 1.9; max-width: 320px; }
 #startScreen { background: radial-gradient(ellipse at 50% 42%, rgba(36, 30, 93, .9) 0%, rgba(10, 15, 40, .97) 42%, #030611 100%); }
 #startScreen:before { content: ''; position: absolute; width: min(74vw, 360px); height: min(74vw, 360px); border: 1px solid rgba(93,231,255,.22); border-radius: 50%; box-shadow: 0 0 0 22px rgba(169,130,255,.05), 0 0 0 44px rgba(93,231,255,.035), 0 0 70px rgba(93,231,255,.12); pointer-events: none; }
-#startScreen h1 { color: #f4f1ff; text-shadow: 0 0 18px var(--violet), 0 0 42px rgba(169,130,255,.72); z-index: 1; } #startScreen .subtitle { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); z-index: 1; }
+#startScreen h1 { color: #f4f1ff; text-shadow: 0 0 18px var(--violet), 0 0 42px rgba(169,130,255,.72); z-index: 1; } #startScreen h1::before { content: '◈'; display: block; margin-bottom: 7px; color: var(--cyan); font-size: .52em; text-shadow: 0 0 16px var(--cyan); } #startScreen .subtitle { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); z-index: 1; }
 #startBtn { border-color: var(--mint); color: var(--mint); background: linear-gradient(135deg, rgba(101,255,188,.18), rgba(93,231,255,.08)); text-shadow: 0 0 8px var(--mint); z-index: 1; }
 #gameOverScreen { display: none; } #gameOverScreen h1 { color: var(--danger); text-shadow: 0 0 20px var(--danger); }
 #gameOverScreen .stats, #winScreen .stats { color: #aab8d5; font-size: 15px; margin-bottom: 24px; text-align: center; line-height: 2; } #gameOverScreen .stats span, #winScreen .stats span { color: var(--amber); font-weight: 750; }
@@ -80,7 +80,7 @@ button { -webkit-font-smoothing: antialiased; }
 #backBtn { border-color: var(--violet); color: var(--violet); background: rgba(169,130,255,.12); margin-top: 20px; }
 #tooltip { position: fixed; z-index: 50; pointer-events: none; display: none; background: rgba(7, 13, 30, .96); border: 1px solid rgba(93,231,255,.35); border-radius: 9px; padding: 9px 11px; color: #edf4ff; font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; min-width: 140px; box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 15px rgba(93,231,255,.1); }
 #tooltip .tt-name { font-weight: 750; font-size: 12px; margin-bottom: 4px; color: var(--cyan); } #tooltip .tt-stat { color: #96a5c6; } #tooltip .tt-stat span { color: #e5edff; font-weight: 650; } #tooltip .tt-action { color: var(--danger); margin-top: 5px; font-weight: 650; font-size: 9px; text-transform: uppercase; }
-@media (max-width: 600px) { #hud { gap: 3px; padding-left: 5px; padding-right: 5px; } .hud-item { min-height: 25px; padding: 3px 5px; font-size: 10px; } .hud-icon { font-size: 12px; } #sector { font-size: 9px; } #actionBar { top: max(39px, calc(env(safe-area-inset-top) + 30px)); right: 5px; gap: 4px; } .action-btn { padding: 6px 8px; font-size: 9px; } #towerPanel { gap: 4px; padding-left: 4px; padding-right: 4px; } .tower-btn { min-width: 49px; min-height: 54px; border-radius: 6px; } .tower-btn .t-icon { font-size: 20px; } }
+@media (max-width: 600px) { #hud { gap: 3px; padding-left: 5px; padding-right: 5px; } .hud-item { min-height: 25px; padding: 3px 5px; font-size: 10px; } .hud-icon { width: 13px; height: 13px; transform: scale(.88); transform-origin: center; } #sector { font-size: 9px; } #actionBar { top: max(39px, calc(env(safe-area-inset-top) + 30px)); right: 5px; gap: 4px; } .action-btn { padding: 6px 8px; font-size: 9px; } #towerPanel { gap: 4px; padding-left: 4px; padding-right: 4px; } .tower-btn { min-width: 49px; min-height: 54px; border-radius: 6px; } .tower-btn .t-icon { width: 25px; height: 21px; transform: scale(.9); } .role-glyph { width: 12px; height: 12px; font-size: 7px; } }
 @media (max-height: 520px) { #towerPanel { padding-top: 6px; } .tower-btn { min-height: 45px; } .tower-btn .t-icon { font-size: 17px; } .overlay-screen .subtitle { margin-bottom: 18px; } .instructions { margin-top: 16px; } }
 </style>
 </head>
@@ -94,15 +94,15 @@ button { -webkit-font-smoothing: antialiased; }
   <div class="hud-item" id="sector"><span id="sectorName">Alpha</span></div>
 </div>
 <div id="actionBar">
-  <button class="action-btn" id="startWave">Start Wave</button>
+  <button class="action-btn" id="startWave" aria-label="Start wave">Start Wave</button>
   <div id="wavePreview"></div>
-  <button class="action-btn" id="sellTower">Sell Selected</button>
-  <button class="action-btn" id="sellAll">Sell All</button>
-  <button class="action-btn" id="laserLockBtn">Lock</button>
-  <button class="action-btn" id="speedToggle">1x</button>
-  <button class="action-btn" id="autoUpgrade">Auto</button>
-  <button class="action-btn" id="muteToggle">Audio</button>
-  <button class="action-btn" id="missionBtn" style="border-color:#aa88ff;color:#aa88ff;">Missions</button>
+  <button class="action-btn" id="sellTower" aria-label="Sell selected tower">Sell Selected</button>
+  <button class="action-btn" id="sellAll" aria-label="Sell all towers">Sell All</button>
+  <button class="action-btn" id="laserLockBtn" aria-label="Toggle laser lock">Lock</button>
+  <button class="action-btn" id="speedToggle" aria-label="Toggle game speed">1x</button>
+  <button class="action-btn" id="autoUpgrade" aria-label="Toggle automatic upgrades">Auto</button>
+  <button class="action-btn" id="muteToggle" aria-label="Toggle audio">Audio</button>
+  <button class="action-btn" id="missionBtn" aria-label="Open mission selector" style="border-color:#aa88ff;color:#aa88ff;">Missions</button>
 </div>
 <div id="towerPanel"></div>
 <div id="tooltip">
@@ -117,7 +117,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
-  <div class="build-version">v1.2.0 · visual pass 20</div>
+  <div class="build-version">v1.3.0 · icon systems cycle 2</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
