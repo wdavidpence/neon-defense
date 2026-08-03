@@ -1039,8 +1039,11 @@ function drawFloatTexts() {
 
 function drawBackground() {
   const w = canvas.width, h = canvas.height;
+  const sectorIndex = Math.max(0, Math.min(6, Math.floor((G.mission - 1) / 15)));
+  const palettes = [['#111c46', '#080e29', '#020511'], ['#102845', '#07172d', '#020611'], ['#241443', '#100b2a', '#050311'], ['#3b172f', '#160c24', '#06030d'], ['#102f40', '#071a2a', '#020811'], ['#302044', '#120d2a', '#050311'], ['#3b2920', '#19101d', '#08050b']];
+  const palette = palettes[sectorIndex];
   const bg = ctx.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.45, Math.max(w, h) * 0.72);
-  bg.addColorStop(0, '#111c46'); bg.addColorStop(0.52, '#080e29'); bg.addColorStop(1, '#020511');
+  bg.addColorStop(0, palette[0]); bg.addColorStop(0.52, palette[1]); bg.addColorStop(1, palette[2]);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
 
   ctx.save();
