@@ -962,6 +962,18 @@ function drawEnemies() {
     }
     ctx.restore();
 
+    // Compact combat sigil keeps enemy role readable amid overlapping sprites.
+    if (e.type !== 'creep' && e.type !== 'boss') {
+      const sigil = { fast:'R', armored:'A', flying:'F', bouncer:'B' }[e.type] || '';
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      ctx.fillStyle = c;
+      ctx.font = `700 ${Math.max(7, r * 0.62)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText(sigil, e.x, e.y - r - 11);
+      ctx.restore();
+    }
+
     if (e.hp < e.maxHp) {
       const barW = r * 2.2, barH = 3, barX = e.x - barW / 2, barY = e.y - r - 9;
       ctx.fillStyle = 'rgba(0,0,0,0.78)'; ctx.fillRect(barX, barY, barW, barH);
