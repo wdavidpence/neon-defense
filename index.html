@@ -683,7 +683,6 @@ const G = {
 // =============== RENDERING ===============
 
 // Deterministic starfield: seeded PRNG generates positions/sizes/phases once per resize.
-const STAR_SEED = 0x4E6CB1;
 let starField = [];
 
 // Shared world origin: the map is drawn centered in the viewport, offset from (0,0)
@@ -740,6 +739,7 @@ function resizeCanvas() {
     lastTime = performance.now();
   }
 }
+const STAR_SEED = 0x4E6CB1;
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
