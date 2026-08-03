@@ -997,6 +997,10 @@ function drawProjectiles() {
     ctx.strokeStyle = def.pCol;
     ctx.shadowColor = def.pCol;
     ctx.shadowBlur = 10;
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = def.pCol;
+    ctx.fillRect(-13, -2, 10, 4);
+    ctx.globalAlpha = 1;
     switch(p.type) {
       case 'aoe':
         ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.arc(-4, 0, 7, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
