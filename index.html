@@ -196,6 +196,9 @@ const PATH_TEMPLATES = [
   [[0,0],[3,0],[3,5],[9,5],[9,1],[12,1],[12,11],[7,11],[7,16],[0,16]],
   [[0,5],[2,5],[2,1],[6,1],[6,9],[11,9],[11,15],[5,15],[5,12],[0,12]],
   [[0,10],[4,10],[4,3],[8,3],[8,13],[12,13],[12,6],[3,6],[3,16],[0,16]],
+  [[0,7],[3,7],[3,1],[8,1],[8,11],[5,11],[5,16],[12,16]],
+  [[0,13],[2,13],[2,4],[6,4],[6,15],[10,15],[10,8],[12,8],[12,2]],
+  [[0,9],[4,9],[4,2],[9,2],[9,6],[2,6],[2,14],[7,14],[7,11],[12,11]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -203,7 +206,7 @@ const PATH_TEMPLATES = [
 // Missions 1-3 additionally provide an explicit deterministic sub-wave sequence;
 // the legacy wave field remains the first sub-wave for selector compatibility.
 // Missions 6-8 progress from swarm/runner pressure into armored, flying, and Bouncer disruption roles.
-// Beta authored slice covers rush 16-18 and overclock 19-21; later missions use legacy fallback.
+// Beta lean slice keeps opening budgets tight for faster build decisions.
 const AUTHORED_MISSIONS = {
   1:  { path: PATH_TEMPLATES[0],  startingGold:250, startingLives:20, wave:{ budget:6,   roster:['creep','creep','creep','creep','creep','creep'] }, waves:[
     { budget:6,  roster:['creep','creep','creep','creep','creep','creep'] },
@@ -311,6 +314,21 @@ const AUTHORED_MISSIONS = {
     { budget:18, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
     { budget:21, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
   ], reward:120 },
+  22: { path: PATH_TEMPLATES[21], startingGold:190, startingLives:18, modifier:'lean', wave:{ budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] }, waves:[
+    { budget:12, roster:['creep','creep','creep','creep','fast','fast','fast','fast'] },
+    { budget:15, roster:['creep','creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:18, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:125 },
+  23: { path: PATH_TEMPLATES[22], startingGold:180, startingLives:18, modifier:'lean', wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:13, roster:['creep','creep','creep','fast','fast','fast','fast','fast'] },
+    { budget:16, roster:['creep','creep','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:19, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:130 },
+  24: { path: PATH_TEMPLATES[23], startingGold:170, startingLives:18, modifier:'lean', wave:{ budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] }, waves:[
+    { budget:14, roster:['creep','creep','fast','fast','fast','fast','fast','fast'] },
+    { budget:17, roster:['creep','fast','fast','fast','fast','fast','fast','fast','fast'] },
+    { budget:20, roster:['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'] },
+  ], reward:135 },
 };
 
 function getPathForMission(m) {
@@ -348,7 +366,7 @@ function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
   const missionModifier = getMissionData(G.mission)?.modifier;
-  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : '';
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
