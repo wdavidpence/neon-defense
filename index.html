@@ -46,6 +46,7 @@ button { -webkit-font-smoothing: antialiased; }
 .tower-btn .t-counter { color: var(--cyan); font-size: 7px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; margin-top: 1px; opacity: .95; }
 #actionBar { position: fixed; top: max(44px, calc(env(safe-area-inset-top) + 34px)); right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .action-btn { padding: 7px 11px; border: 1px solid; border-radius: 5px; background: linear-gradient(135deg, rgba(22, 44, 82, .96), rgba(4, 10, 27, .98)); color: #fff; font-size: 10px; font-weight: 750; cursor: pointer; font-family: 'Segoe UI', system-ui, sans-serif; text-transform: uppercase; letter-spacing: .8px; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; box-shadow: inset 0 1px rgba(255,255,255,.11), 0 0 12px rgba(23,116,191,.16); }
+#startWave::before { content: '▶'; } #sellTower::before { content: '×'; } #sellAll::before { content: '▣'; } #laserLockBtn::before { content: '⌾'; } #speedToggle::before { content: '»'; } #autoUpgrade::before { content: '↑'; } #muteToggle::before { content: '◖'; } #missionBtn::before { content: '▤'; }
 #startWave { border-color: var(--mint); color: var(--mint); text-shadow: 0 0 8px var(--mint); } #sellTower, #sellAll { border-color: var(--danger); color: var(--danger); text-shadow: 0 0 8px var(--danger); }
 #speedToggle { border-color: var(--cyan); color: var(--cyan); text-shadow: 0 0 8px var(--cyan); } #muteToggle { border-color: #9aa9c9; color: #b9c4dc; padding: 5px 9px; font-size: 12px; }
 #autoUpgrade { border-color: var(--amber); color: var(--amber); text-shadow: 0 0 8px var(--amber); } #autoUpgrade.active { background: rgba(255,209,102,.18); box-shadow: 0 0 16px rgba(255,209,102,.3); }
@@ -91,15 +92,15 @@ button { -webkit-font-smoothing: antialiased; }
   <div class="hud-item" id="sector"><span id="sectorName">Alpha</span></div>
 </div>
 <div id="actionBar">
-  <button class="action-btn" id="startWave">▶ Start Wave</button>
+  <button class="action-btn" id="startWave">Start Wave</button>
   <div id="wavePreview"></div>
-  <button class="action-btn" id="sellTower">✖ Sell Selected</button>
-  <button class="action-btn" id="sellAll">🗑 Sell All</button>
-  <button class="action-btn" id="laserLockBtn">🔒 Lock</button>
-  <button class="action-btn" id="speedToggle">⏩ 1x</button>
-  <button class="action-btn" id="autoUpgrade">⬆ Auto</button>
-  <button class="action-btn" id="muteToggle">🔊</button>
-  <button class="action-btn" id="missionBtn" style="border-color:#aa88ff;color:#aa88ff;">📋 Missions</button>
+  <button class="action-btn" id="sellTower">Sell Selected</button>
+  <button class="action-btn" id="sellAll">Sell All</button>
+  <button class="action-btn" id="laserLockBtn">Lock</button>
+  <button class="action-btn" id="speedToggle">1x</button>
+  <button class="action-btn" id="autoUpgrade">Auto</button>
+  <button class="action-btn" id="muteToggle">Audio</button>
+  <button class="action-btn" id="missionBtn" style="border-color:#aa88ff;color:#aa88ff;">Missions</button>
 </div>
 <div id="towerPanel"></div>
 <div id="tooltip">
@@ -1876,7 +1877,7 @@ function gameLoop(timestamp) {
   drawFloatTexts();
 
   // Update speed display
-  document.getElementById('speedToggle').textContent = `⏩ ${SPEEDS[speedIdx]}x`;
+  document.getElementById('speedToggle').textContent = `${SPEEDS[speedIdx]}x`;
 
   requestAnimationFrame(gameLoop);
 }
