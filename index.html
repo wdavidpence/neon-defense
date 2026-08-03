@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.5.1 · Pause and Mission Results</title>
+<title>neoDefense 1.5.2 · Multi-Wave Start Fix</title>
 <style>
 :root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -130,7 +130,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
-  <div class="build-version">v1.5.1 · pause and mission results</div>
+  <div class="build-version">v1.5.2 · multi-wave start fix</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
@@ -2362,7 +2362,7 @@ function gameLoop(timestamp) {
   }
 
   // Spawn enemies from queue
-  if (G.waveActive && G.spawnQueue.length > 0) {
+  if (G.waveActive) {
     const elapsed = Date.now() - G.waveStartTime;
     while (G.spawnQueue.length > 0 && G.spawnQueue[0].delay <= elapsed) {
       const spawn = G.spawnQueue.shift();
