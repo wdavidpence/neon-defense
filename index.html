@@ -903,87 +903,54 @@ function drawTowerIcon(x, y, def) {
 function drawEnemies() {
   G.enemies.forEach(e => {
     if (!e.alive) return;
-
     const def = ENEMY_DEFS[e.type];
-    ctx.fillStyle = e.slowed ? '#88ccff' : def.color;
+    const c = e.slowed ? '#88ddff' : def.color;
+    const r = def.r;
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.fillStyle = c;
+    ctx.strokeStyle = '#effcff';
+    ctx.lineWidth = Math.max(1.2, r * 0.16);
+    ctx.shadowColor = c;
+    ctx.shadowBlur = e.type === 'boss' ? 16 : 7;
 
     switch(e.type) {
-      case 'creep': // Circle with eyes
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(e.x - 4, e.y - 3, 3, 0, Math.PI * 2);
-        ctx.arc(e.x + 4, e.y - 3, 3, 0, Math.PI * 2);
-        ctx.fill();
+      case 'creep':
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#071229'; ctx.beginPath(); ctx.arc(-r * 0.32, -r * 0.2, r * 0.16, 0, Math.PI * 2); ctx.arc(r * 0.32, -r * 0.2, r * 0.16, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, r * 0.08, r * 0.42, 0.15, Math.PI - 0.15); ctx.stroke();
         break;
-      case 'fast': // Triangle
-        ctx.beginPath();
-        ctx.moveTo(e.x, e.y - def.r);
-        ctx.lineTo(e.x - def.r, e.y + def.r);
-        ctx.lineTo(e.x + def.r, e.y + def.r);
-        ctx.closePath();
-        ctx.fill();
+      case 'fast':
+        ctx.rotate(-0.15); ctx.beginPath(); ctx.moveTo(r * 1.15, 0); ctx.lineTo(-r * 0.72, -r * 0.72); ctx.lineTo(-r * 0.42, 0); ctx.lineTo(-r * 0.72, r * 0.72); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * 0.18, 0, r * 0.13, 0, Math.PI * 2); ctx.fill();
         break;
-      case 'armored': // Circle with border
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+      case 'armored':
+        ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; const px = Math.cos(a) * r, py = Math.sin(a) * r; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#071229'; ctx.beginPath(); ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-r * 0.58, 0); ctx.lineTo(r * 0.58, 0); ctx.moveTo(0, -r * 0.58); ctx.lineTo(0, r * 0.58); ctx.stroke();
         break;
-      case 'flying': // Circle with glow
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 0.3;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r + 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+      case 'flying':
+        ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(0, 0, r * 1.55, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, r * 0.5); ctx.lineTo(0, r * 0.18); ctx.lineTo(-r * 0.8, r * 0.5); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#f4ffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-r * 0.9, r * 0.65); ctx.lineTo(-r * 0.25, r * 0.35); ctx.moveTo(r * 0.9, r * 0.65); ctx.lineTo(r * 0.25, r * 0.35); ctx.stroke();
         break;
-      case 'bouncer': // Circle with border
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r + 1, 0, Math.PI * 2);
-        ctx.stroke();
+      case 'bouncer':
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#071229'; ctx.lineWidth = Math.max(2, r * 0.24); ctx.beginPath(); ctx.arc(0, 0, r * 0.56, 0.2, Math.PI * 1.35); ctx.stroke();
         break;
-      case 'boss': // Large circle with details
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, def.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ff4444';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        // Eyes
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(e.x - 8, e.y - 5, 5, 0, Math.PI * 2);
-        ctx.arc(e.x + 8, e.y - 5, 5, 0, Math.PI * 2);
-        ctx.fill();
+      case 'boss':
+        ctx.rotate(Date.now() * 0.00025); ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, rr = i % 2 ? r * 0.72 : r; const px = Math.cos(a) * rr, py = Math.sin(a) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#14071c'; ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-r * 0.24, -r * 0.12, r * 0.13, 0, Math.PI * 2); ctx.arc(r * 0.24, -r * 0.12, r * 0.13, 0, Math.PI * 2); ctx.fill();
         break;
     }
+    ctx.restore();
 
-    // HP bar
     if (e.hp < e.maxHp) {
-      const barW = def.r * 2;
-      const barH = 3;
-      const barX = e.x - barW/2;
-      const barY = e.y - def.r - 8;
-
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillRect(barX, barY, barW, barH);
-
+      const barW = r * 2.2, barH = 3, barX = e.x - barW / 2, barY = e.y - r - 9;
+      ctx.fillStyle = 'rgba(0,0,0,0.78)'; ctx.fillRect(barX, barY, barW, barH);
       const hpRatio = e.hp / e.maxHp;
-      ctx.fillStyle = hpRatio > 0.5 ? '#44ff88' : hpRatio > 0.25 ? '#ffcc00' : '#ff4466';
-      ctx.fillRect(barX, barY, barW * hpRatio, barH);
+      ctx.fillStyle = hpRatio > 0.5 ? '#65ffbc' : hpRatio > 0.25 ? '#ffd166' : '#ff6688'; ctx.fillRect(barX, barY, barW * hpRatio, barH);
     }
   });
 }
