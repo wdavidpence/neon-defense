@@ -165,7 +165,7 @@ const POWERUPS = {
 const SECTORS = [
   { name:'Alpha', range:[1,15],   enemies:['creep'],       bossWave:15 },
   { name:'Beta',  range:[16,30],  enemies:['creep','fast'], bossWave:30, summary:'Three tactical rules: RUSH compresses spawns · OVERCLOCK speeds enemies · LEAN / NO-BUILD / BOUNTY reshape planning.' },
-  { name:'Gamma', range:[31,45],  enemies:['creep','fast','armored'], bossWave:45, summary:'REINFORCED armor: armored enemies have 1.3× HP while keeping their 50% damage reduction. HARDENED missions halve slow duration on armored enemies.' },
+  { name:'Gamma', range:[31,45],  enemies:['creep','fast','armored'], bossWave:45, summary:'REINFORCED armor raises HP · HARDENED halves armored slow · JAMMED disables Booster support for Cannons.' },
   { name:'Delta', range:[46,60],  enemies:['creep','fast','armored','flying'], bossWave:60 },
   { name:'Epsilon',range:[61,75], enemies:['creep','fast','armored','flying','bouncer'], bossWave:75 },
   { name:'Zeta',  range:[76,90],  enemies:['creep','fast','armored','flying','bouncer'], bossWave:90 },
@@ -213,6 +213,9 @@ const PATH_TEMPLATES = [
   [[0,8],[4,8],[4,1],[9,1],[9,12],[13,12],[13,5],[7,5],[7,16]],
   [[0,3],[2,3],[2,13],[6,13],[6,6],[11,6],[11,15],[14,15]],
   [[0,11],[3,11],[3,2],[8,2],[8,9],[12,9],[12,16],[5,16],[5,7],[0,7]],
+  [[0,6],[2,6],[2,15],[5,15],[5,4],[9,4],[9,12],[13,12],[13,1]],
+  [[0,14],[4,14],[4,8],[1,8],[1,2],[7,2],[7,10],[11,10],[11,5],[14,5]],
+  [[0,3],[3,3],[3,11],[6,11],[6,1],[10,1],[10,14],[13,14],[13,7],[8,7]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -405,6 +408,22 @@ const AUTHORED_MISSIONS = {
     { budget:20, roster:['creep','creep','fast','fast','fast','armored','armored','armored'] },
     { budget:23, roster:['creep','fast','fast','fast','armored','armored','armored','armored'] },
   ], reward:195 },
+  // Gamma jammed slice: Booster charge remains available, but cannot power Cannons.
+  37: { path: PATH_TEMPLATES[36], startingGold:260, startingLives:18, modifier:'jammed', wave:{ budget:15, roster:['creep','creep','creep','fast','fast','armored','armored'] }, waves:[
+    { budget:15, roster:['creep','creep','creep','fast','fast','armored','armored'] },
+    { budget:18, roster:['creep','creep','fast','fast','armored','armored','armored'] },
+    { budget:21, roster:['creep','fast','fast','armored','armored','armored','armored'] },
+  ], reward:200 },
+  38: { path: PATH_TEMPLATES[37], startingGold:270, startingLives:18, modifier:'jammed', wave:{ budget:16, roster:['creep','creep','fast','fast','fast','armored','armored'] }, waves:[
+    { budget:16, roster:['creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:19, roster:['creep','fast','fast','fast','armored','armored','armored'] },
+    { budget:22, roster:['fast','fast','fast','armored','armored','armored','armored'] },
+  ], reward:205 },
+  39: { path: PATH_TEMPLATES[38], startingGold:280, startingLives:18, modifier:'jammed', wave:{ budget:17, roster:['creep','creep','creep','fast','fast','fast','armored','armored'] }, waves:[
+    { budget:17, roster:['creep','creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:20, roster:['creep','creep','fast','fast','fast','armored','armored','armored'] },
+    { budget:23, roster:['creep','fast','fast','fast','armored','armored','armored','armored'] },
+  ], reward:210 },
 };
 
 function getPathForMission(m) {
@@ -442,7 +461,7 @@ function getWavePreviewText(wave, types) {
   const waves = getAuthoredWaves(G.mission);
   const label = waves && waves.length > 1 ? `Wave ${G.subWaveIndex + 1}/${waves.length} · ` : '';
   const missionModifier = getMissionData(G.mission)?.modifier;
-  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : missionModifier === 'bounty' ? 'BOUNTY · 1.25× kills · ' : missionModifier === 'reinforced' ? 'REINFORCED · armored HP 1.3× · ' : missionModifier === 'hardened' ? 'HARDENED · armored slow 50% · ' : '';
+  const modifier = missionModifier === 'rush' ? 'RUSH · ' : missionModifier === 'overclock' ? 'OVERCLOCK · ' : missionModifier === 'lean' ? 'LEAN · ' : missionModifier === 'no-build' ? 'NO-BUILD · restricted cells · ' : missionModifier === 'bounty' ? 'BOUNTY · 1.25× kills · ' : missionModifier === 'reinforced' ? 'REINFORCED · armored HP 1.3× · ' : missionModifier === 'hardened' ? 'HARDENED · armored slow 50% · ' : missionModifier === 'jammed' ? 'JAMMED · Cannons unpowered · ' : '';
   if (types) wave = { roster: types };
   const budget = wave.budget || getWaveThreatBudget(wave);
   return modifier + label + `${budget} threat · ${getWaveRoleSummary(wave)}`;
@@ -1369,7 +1388,7 @@ function getAdjacentBooster(tower) {
 }
 
 function hasCannonPower(tower) {
-  return tower.key === 'cannon' && !!getAdjacentBooster(tower);
+  return tower.key === 'cannon' && getMissionData(G.mission)?.modifier !== 'jammed' && !!getAdjacentBooster(tower);
 }
 
 function refreshCannonPower() {
@@ -1625,9 +1644,8 @@ function gameLoop(timestamp) {
   G.towers.forEach(t => {
     if (t.key === 'booster') return;
     if (t.key === 'cannon') {
-      const booster = getAdjacentBooster(t);
-      t._powered = !!booster;
-      if (!booster) return;
+      t._powered = hasCannonPower(t);
+      if (!t._powered) return;
     }
     if (Date.now() - t.lastFire < t.fireRate) return;
 
@@ -2008,7 +2026,7 @@ function showMissionSelect() {
           btn.classList.add('authored');
           const difficulty = m === 15 ? 'Boss' : m <= 2 ? 'Starter' : m <= 5 ? 'Training' : m <= 10 ? 'Challenge' : 'Advanced';
           const roles = [...new Set(missionData.wave.roster)].map(type => ({ creep:'●', fast:'➤', armored:'⬢', flying:'✦', bouncer:'◉', boss:'★' }[type] || '?')).join('');
-          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells', bounty:'BOUNTY · +25% kill gold', reinforced:'REINFORCED · armored HP 1.3×', hardened:'HARDENED · armored slow 50%' }[missionData.modifier] || '';
+          const modifierMeta = { rush:'RUSH · fast spawns', overclock:'OVERCLOCK · 1.2× speed', lean:'LEAN · low opening gold', 'no-build':'NO-BUILD · restricted cells', bounty:'BOUNTY · +25% kill gold', reinforced:'REINFORCED · armored HP 1.3×', hardened:'HARDENED · armored slow 50%', jammed:'JAMMED · Cannons unpowered' }[missionData.modifier] || '';
           const modifierMarkup = modifierMeta ? `<span class="mission-modifier">${modifierMeta}</span>` : '';
           btn.innerHTML = `<span class="mission-num">${m}</span><span class="mission-difficulty">${difficulty}</span><span class="mission-meta">💰${missionData.startingGold} · ❤️${missionData.startingLives}</span><span class="mission-threats">${roles} · ${missionData.wave.budget} threat</span>${modifierMarkup}`;
           const miniMap = createMissionMiniMap(missionData);
