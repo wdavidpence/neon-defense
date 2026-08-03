@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.4.0 · Playability Systems Pass</title>
+<title>neoDefense 1.5.0 · Tactical Audio Cue Pass</title>
 <style>
 :root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -129,7 +129,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
-  <div class="build-version">v1.4.0 · playability systems pass</div>
+  <div class="build-version">v1.5.0 · tactical audio cue pass</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
@@ -628,9 +628,17 @@ const SFX = {
   waveStart() { if (this.muted) return; [400,500,600,800].forEach((f,i) => setTimeout(() => this._tone(f,f*1.2,0.12,'square',0.35), i*80)); },
   waveClear() { if (this.muted) return; [523,659,784,1047].forEach((f,i) => setTimeout(() => this._tone(f,f,0.3,'sine',0.3), i*100)); },
   powerUp() { if (this.muted) return; [600,900,1200].forEach((f,i) => setTimeout(() => this._tone(f,f*1.3,0.1,'sine',0.4), i*50)); },
+  placement() { this._tone(420, 720, 0.08, 'sine', 0.28); },
+  upgrade() { this._tone(520, 1040, 0.16, 'triangle', 0.35); },
+  sell() { this._tone(260, 140, 0.12, 'square', 0.28); },
+  invalid() { this._tone(180, 120, 0.1, 'square', 0.3); },
+  leak() { this._noise(0.18, 900, 0.5); this._tone(260, 80, 0.22, 'sawtooth', 0.45); },
+  coreHit() { this._tone(180, 55, 0.28, 'sawtooth', 0.55); },
   explosion() { if (this.muted || this.quality==='low') return; this._noise(0.35, 250, 0.6); },
-  toggle() { this.muted = !this.muted; return this.muted; },
+  toggle() { this.muted = !this.muted; try { localStorage.setItem('NEO_DEFENSE_AUDIO_MUTED', String(this.muted)); } catch(e) {} return this.muted; },
+  restore() { try { this.muted = localStorage.getItem('NEO_DEFENSE_AUDIO_MUTED') === 'true'; } catch(e) {} },
 };
+SFX.restore();
 
 // =============== PROGRESS (localStorage) ===============
 const PROGRESS = {
@@ -2160,14 +2168,16 @@ function collectBoosterCharge(x, y) {
 
 function placeTower(col, row, type) {
   const cell = G.grid[row][col];
-  if (cell._isPath || cell._tower) return;
+  if (cell._isPath || cell._tower) { SFX.invalid(); return; }
   if (cell._noBuild) {
+    SFX.invalid();
     addFloatText(col * CELL + CELL / 2, row * CELL + CELL / 2, 'NO BUILD', '#ff6688');
     return;
   }
 
   const def = TOWER_DEFS[type];
   if (G.gold < def.cost) {
+    SFX.invalid();
     addFloatText(col * CELL + CELL / 2, row * CELL + CELL / 2, `NEED ${def.cost}`, '#ffd166');
     return;
   }
@@ -2195,6 +2205,7 @@ function placeTower(col, row, type) {
   updateBtnStates();
   updateHUD();
   spawnParticles(x, y, def.color, 10, 70);
+  SFX.placement();
 }
 
 function upgradeTower(t) {
@@ -2222,6 +2233,7 @@ function upgradeTower(t) {
   // Visual feedback: fireworks particles
   spawnParticles(t.x, t.y, '#ffdd00', 20 + t.level * 5, 100);
   addFloatText(t.x, t.y - 25, `UPGRADE! LV${t.level}`, '#ffdd00');
+  SFX.upgrade();
 
   refreshCannonPower();
   updateHUD();
@@ -2236,6 +2248,7 @@ function sellTower(t) {
 
   if (G.selectedTower === t) { G.selectedTower = null; }
 
+  SFX.sell();
   refreshCannonPower();
   updateHUD();
 }
@@ -2376,6 +2389,8 @@ function gameLoop(timestamp) {
       // Reached core
       e.alive = false;
       G.lives--;
+      SFX.leak();
+      SFX.coreHit();
 
       if (e.type === 'bouncer') disruptBoosters();
 
