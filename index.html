@@ -993,29 +993,32 @@ function drawProjectiles() {
 function drawBeams() {
   G.beams.forEach(b => {
     if (b.time < Date.now()) return;
-
-    ctx.strokeStyle = '#66ffff';
-    ctx.lineWidth = b.width || 2;
-    ctx.shadowColor = '#66ffff';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.moveTo(b.x1, b.y1);
-    ctx.lineTo(b.x2, b.y2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    const width = b.width || 2;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(70, 220, 255, 0.22)'; ctx.lineWidth = width * 5; ctx.shadowColor = '#5de7ff'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    ctx.strokeStyle = '#79f5ff'; ctx.lineWidth = width * 1.8; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, width * 0.55); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    ctx.restore();
   });
 }
 
 function drawParticles() {
   G.particles.forEach(p => {
     if (!p.alive) return;
-
-    ctx.fillStyle = p.color;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = Math.max(3, p.size * 3);
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.size * (1 + p.alpha * 0.35), 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.restore();
   });
 }
 
