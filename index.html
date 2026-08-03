@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>neoDefense 1.5.2 · Multi-Wave Start Fix</title>
+<title>neoDefense 1.5.4 · 20-Bug Playability Fix</title>
 <style>
 :root { --bg: #050817; --panel: rgba(10, 17, 39, 0.82); --panel-solid: #0b1228; --line: rgba(116, 153, 220, 0.28); --muted: #8794b8; --cyan: #5de7ff; --violet: #a982ff; --mint: #65ffbc; --amber: #ffd166; --danger: #ff6688; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -130,7 +130,7 @@ button { -webkit-font-smoothing: antialiased; }
 <div id="startScreen" class="overlay-screen">
   <h1>NEO DEFENSE</h1>
   <div class="subtitle">Gamma Campaign · Tactical Tower Defense</div>
-  <div class="build-version">v1.5.2 · multi-wave start fix</div>
+  <div class="build-version">v1.5.4 · 20-bug playability fix</div>
   <button id="startBtn">START</button>
   <div class="instructions">
     Select a tower → tap a cell to place<br>
@@ -162,7 +162,8 @@ const ctx = canvas.getContext('2d');
 let COLS, ROWS, CELL, MAP_W, MAP_H;
 function calcGrid() {
   const vw = window.innerWidth, vh = window.innerHeight;
-  CELL = Math.max(32, Math.min(48, Math.floor((vh - 120) / 16)));
+  // Fit the authored 15-column path topology on portrait screens.
+  CELL = Math.max(24, Math.min(48, Math.floor((vh - 120) / 17), Math.floor(vw / 15)));
   COLS = Math.max(8, Math.min(16, Math.floor(vw / CELL)));
   ROWS = Math.max(12, Math.min(20, Math.floor((vh - 120) / CELL)));
   MAP_W = COLS * CELL; MAP_H = ROWS * CELL;
@@ -408,11 +409,11 @@ const AUTHORED_MISSIONS = {
   ], reward:150 },
   28: { path: PATH_TEMPLATES[27], startingGold:230, startingLives:18, modifier:'bounty', wave:{ budget:13, roster:['creep','creep','creep','fast','fast','fast','armored'] }, waves:[
     { budget:13, roster:['creep','creep','creep','fast','fast','fast','armored'] },
-    { budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] },
-    { budget:21, roster:['creep','fast','fast','fast','armored','armored','armored'] },
+    { budget:16, roster:['creep','creep','fast','fast','fast','armored','armored'] },
+    { budget:19, roster:['creep','fast','fast','fast','armored','armored','armored'] },
   ], reward:155 },
-  29: { path: PATH_TEMPLATES[28], startingGold:240, startingLives:18, modifier:'bounty', wave:{ budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] }, waves:[
-    { budget:18, roster:['creep','creep','fast','fast','fast','armored','armored'] },
+  29: { path: PATH_TEMPLATES[28], startingGold:240, startingLives:18, modifier:'bounty', wave:{ budget:16, roster:['creep','creep','fast','fast','fast','armored','armored'] }, waves:[
+    { budget:16, roster:['creep','creep','fast','fast','fast','armored','armored'] },
     { budget:17, roster:['creep','fast','fast','fast','fast','armored','armored'] },
     { budget:20, roster:['fast','fast','fast','fast','armored','armored','armored'] },
   ], reward:160 },
@@ -730,6 +731,8 @@ function resizeCanvas() {
     if (t.row < ROWS && t.col < COLS) {
       const cell = G.grid[t.row][t.col];
       if (cell && !cell._isPath && !cell._noBuild) {
+        t.x = t.col * CELL + CELL / 2;
+        t.y = t.row * CELL + CELL / 2;
         cell._tower = t;
       } else {
         G.towers.splice(i, 1);
@@ -750,7 +753,6 @@ function resizeCanvas() {
 }
 const STAR_SEED = 0x4E6CB1;
 resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
 function buildStarField() {
   const w = canvas.width, h = canvas.height;
@@ -1871,6 +1873,8 @@ function spawnEnemy(type) {
 function findTarget(tower) {
   let best = null, bestDist = Infinity;
 
+  if (tower.key === 'cannon' && !hasCannonPower(tower)) return null;
+
   for (const e of G.enemies) {
     if (!e.alive) continue;
 
@@ -2004,9 +2008,16 @@ function damageEnemy(enemy, damage) {
         if (d < 80) {
           if (t.level > 1) {
             t.level--;
+            const def = TOWER_DEFS[t.key];
+            t.damage = Math.floor(def.dmg * (1 + (t.level - 1) * 0.45));
+            t.range = Math.floor(def.range * (1 + (t.level - 1) * 0.12));
+            t.fireRate = Math.max(50, Math.floor(def.fireRate * (1 - (t.level - 1) * 0.12)));
+            if (t.aoeR) t.aoeR = Math.floor(def.aoeR * (1 + (t.level - 1) * 0.18));
+            if (t.beamW) t.beamW = def.beamW + (t.level - 1);
             addFloatText(t.x, t.y - 20, 'DAMAGED!', '#ff4466');
           } else {
             G.towers = G.towers.filter(tw => tw !== t);
+            if (G.selectedTower === t) G.selectedTower = null;
             if (G.grid[t.row]) G.grid[t.row][t.col]._tower = null;
           }
         }
@@ -2041,7 +2052,8 @@ function spawnParticles(x, y, color, count, speed) {
 }
 
 function addFloatText(x, y, text, color) {
-  G.floatTexts.push({ x, y, text, color, startTime: Date.now(), duration: 1200 });
+  const startTime = Date.now();
+  G.floatTexts.push({ x, y, text, color, startTime, duration: 1200, time: startTime + 1200 });
 }
 
 function startWave() {
@@ -2170,7 +2182,11 @@ function collectBoosterCharge(x, y) {
 
 function placeTower(col, row, type) {
   const cell = G.grid[row][col];
-  if (cell._isPath || cell._tower) { SFX.invalid(); return; }
+  if (cell._isPath || cell._tower) {
+    SFX.invalid();
+    addFloatText(col * CELL + CELL / 2, row * CELL + CELL / 2, cell._isPath ? 'PATH BLOCKED' : 'OCCUPIED', '#ff6688');
+    return;
+  }
   if (cell._noBuild) {
     SFX.invalid();
     addFloatText(col * CELL + CELL / 2, row * CELL + CELL / 2, 'NO BUILD', '#ff6688');
@@ -2409,7 +2425,7 @@ function gameLoop(timestamp) {
 
       if (G.lives <= 0) {
         G.gameOver = true;
-        document.getElementById('finalMission').textContent = G.mission - 1;
+        document.getElementById('finalMission').textContent = G.mission;
         document.getElementById('finalTowers').textContent = G.towersBuilt;
         document.getElementById('finalKills').textContent = G.enemiesKilled;
         document.getElementById('finalLeaks').textContent = G.leaks;
@@ -2543,7 +2559,7 @@ function gameLoop(timestamp) {
         p.y += p.vy * dt / 1000;
 
         // Check if out of bounds
-        if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+        if (p.x < -CELL || p.x > MAP_W + CELL || p.y < -CELL || p.y > MAP_H + CELL) {
           p.alive = false;
         } else {
           // Check collision with enemies
