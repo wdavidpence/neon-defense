@@ -770,6 +770,8 @@ function drawSpawn() {
   ctx.fillStyle = '#ff4f9a';
   ctx.shadowBlur = 8;
   ctx.beginPath(); ctx.arc(0, 0, CELL * 0.17, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffd1e5'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, -CELL * 0.28); ctx.lineTo(CELL * 0.28, 0); ctx.lineTo(0, CELL * 0.28); ctx.lineTo(-CELL * 0.28, 0); ctx.closePath(); ctx.stroke();
   ctx.restore();
   ctx.fillStyle = '#ff7ab7';
   ctx.font = `bold ${Math.max(8, CELL * 0.17)}px Segoe UI, sans-serif`;
@@ -797,6 +799,10 @@ function drawCore() {
   ctx.fillStyle = '#dffcff';
   ctx.shadowBlur = 8;
   ctx.beginPath(); ctx.arc(0, 0, CELL * 0.28, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5de7ff'; ctx.shadowBlur = 12;
+  ctx.beginPath(); ctx.arc(0, 0, CELL * 0.12 * pulse, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-CELL * 0.18, 0); ctx.lineTo(CELL * 0.18, 0); ctx.moveTo(0, -CELL * 0.18); ctx.lineTo(0, CELL * 0.18); ctx.stroke();
   ctx.restore();
 
   const bx = end.x - 22, by = end.y + CELL * 0.78, bw = 44, bh = 5;
