@@ -2143,6 +2143,13 @@ function waveComplete() {
   G.subWaveIndex = 0;
   if (G.mission > 99) { winGame(); return; }
 
+  // Clear all towers, projectiles, beams, particles when switching to the next mission.
+  G.towers = [];
+  G.towersBuilt = 0;
+  G.projectiles = [];
+  G.beams = [];
+  G.particles = [];
+
   const nextMission = getMissionData(G.mission);
   if (nextMission) {
     G.gold = nextMission.startingGold;
