@@ -1428,6 +1428,10 @@ function drawEnemies() {
     const r = def.r;
     ctx.save();
     ctx.translate(e.x, e.y);
+    // Rotate enemy sprite in its movement direction (boss has own rotation).
+    if (e.type !== 'boss') {
+      ctx.rotate(e._dir || 0);
+    }
     ctx.strokeStyle = '#effcff';
     ctx.lineWidth = Math.max(1.2, r * 0.16);
     ctx.shadowColor = c;
@@ -1802,8 +1806,7 @@ function drawParticles() {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = p.alpha;
     ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = Math.max(3, p.size * 3);
+    // Removed per-particle shadowBlur for performance (was shadowBlur = size*3).
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * (1 + p.alpha * 0.35), 0, Math.PI * 2);
     ctx.fill();
@@ -2013,11 +2016,12 @@ function damageEnemy(enemy, damage) {
     G.gold += goldBonus;
     collectBoosterCharge(enemy.x, enemy.y);
 
-    // Fireworks explosion: white-hot core flash then color burst
+    // Fireworks explosion: white-hot core flash then color burst.
+    // Capped at 8 particles max for performance (was 20 with shadowBlur each).
     const colors = ['#ff3366','#ffcc00','#8844ff','#ff6644','#aa44ff','#ff3344'];
-    spawnParticles(enemy.x, enemy.y, '#ffffff', 6, 28);
-    for (let i = 0; i < 14; i++) {
-      spawnParticles(enemy.x, enemy.y, colors[Math.floor(Math.random() * colors.length)], 10 + Math.random() * 12, 50 + Math.random() * 90);
+    spawnParticles(enemy.x, enemy.y, '#ffffff', 5, 28);
+    for (let i = 0; i < 3; i++) {
+      spawnParticles(enemy.x, enemy.y, colors[Math.floor(Math.random() * colors.length)], 8 + Math.random() * 8, 40 + Math.random() * 60);
     }
 
     SFX.death();
@@ -2428,6 +2432,9 @@ function gameLoop(timestamp) {
       e.slowed = false;
     }
 
+    // Track movement direction for rotation in rendering.
+    const oldX = e.x, oldY = e.y;
+
     const moveAmount = (e.speed * speedMult * dt) / 1000;
     e.dist += moveAmount;
 
@@ -2456,6 +2463,10 @@ function gameLoop(timestamp) {
       const pos = posOnPath(e.dist);
       e.x = pos.x;
       e.y = pos.y;
+      // Store movement direction for rotation in rendering.
+      const ddx = e.x - oldX, ddy = e.y - oldY;
+      const dd = Math.hypot(ddx, ddy);
+      e._dir = dd > 0 ? Math.atan2(ddy, ddx) : (e._dir || 0);
     }
   });
 
@@ -2867,6 +2878,12 @@ function showMissionSelect() {
             G.gold = selectedMission.startingGold;
             G.lives = selectedMission.startingLives;
           }
+          // Clear all towers, projectiles, beams, particles when switching missions.
+          G.towers = [];
+          G.towersBuilt = 0;
+          G.projectiles = [];
+          G.beams = [];
+          G.particles = [];
           loadMissionPath(m);
           createGrid();
           updateHUD();
