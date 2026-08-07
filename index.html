@@ -261,6 +261,10 @@ const PATH_TEMPLATES = [
   [[0,2],[4,2],[4,8],[1,8],[1,14],[7,14],[7,5],[12,5],[12,11]],
   [[0,14],[3,14],[3,4],[8,4],[8,12],[12,12],[12,1],[6,1],[6,8]],
   [[0,6],[5,6],[5,1],[10,1],[10,9],[2,9],[2,15],[8,15],[8,12],[12,12]],
+  // Gamma finale arc: missions 43-45 path templates.
+  [[0,1],[3,1],[3,9],[6,9],[6,4],[10,4],[10,13],[14,13]],
+  [[0,8],[2,8],[2,1],[7,1],[7,12],[14,12],[14,5],[9,5],[9,15]],
+  [[0,5],[5,5],[5,2],[8,2],[8,10],[3,10],[3,14],[12,14],[12,7],[14,7]],
 ];
 
 // Authored schema: path is a grid-point layout; wave.roster is ordered and
@@ -485,6 +489,23 @@ const AUTHORED_MISSIONS = {
     { budget:37, roster:['creep','creep','fast','fast','armored','armored','armored','flying','flying','flying','bouncer','bouncer'] },
     { budget:40, roster:['creep','fast','fast','armored','armored','armored','armored','flying','flying','flying','bouncer','bouncer'] },
   ], reward:215 },
+  // Gamma finale arc: missions 43-44 escalate to full mixed-role pressure; 45 is the sector boss.
+  43: { path: PATH_TEMPLATES[42], startingGold:310, startingLives:17, modifier:'mixed', wave:{ budget:19, roster:['creep','creep','fast','fast','fast','armored','armored','flying'] }, waves:[
+    { budget:19, roster:['creep','creep','fast','fast','fast','armored','armored','flying'] },
+    { budget:29, roster:['creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:33, roster:['fast','fast','armored','armored','flying','flying','bouncer','bouncer','bouncer'] },
+  ], reward:220 },
+  44: { path: PATH_TEMPLATES[43], startingGold:320, startingLives:17, modifier:'mixed', wave:{ budget:23, roster:['creep','fast','fast','fast','armored','armored','flying','bouncer'] }, waves:[
+    { budget:23, roster:['creep','fast','fast','fast','armored','armored','flying','bouncer'] },
+    { budget:30, roster:['fast','fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:32, roster:['fast','fast','armored','armored','armored','flying','flying','bouncer','bouncer','boss'] },
+  ], reward:225 },
+  // Final boss wave: mixed roles culminate in the Gamma sector boss.
+  45: { path: PATH_TEMPLATES[44], startingGold:350, startingLives:20, wave:{ budget:21, roster:['creep','fast','fast','armored','armored','flying','bouncer'] }, waves:[
+    { budget:21, roster:['creep','fast','fast','armored','armored','flying','bouncer'] },
+    { budget:28, roster:['fast','fast','armored','armored','flying','flying','bouncer','bouncer'] },
+    { budget:50, roster:['creep','fast','fast','armored','armored','flying','flying','bouncer','bouncer','boss'] },
+  ], reward:300 },
 };
 
 function getPathForMission(m) {
